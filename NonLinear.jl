@@ -74,7 +74,7 @@ function main()::Nothing
         local intensity_value::Float64
         local temp_value::Float64
 
-        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, generator)
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=generator)
 
         local first_loop::Bool = true
         local intensity::Vector{Float64} = zeros(num_cells)
@@ -137,7 +137,7 @@ function main()::Nothing
 
         iteration_number += 1
 
-        if (iteration_number % convert(Int64, 1e2) == 0)
+        if (iteration_number % 100 == 0)
             println(string("Iteration Number ", iteration_number))
         end
 

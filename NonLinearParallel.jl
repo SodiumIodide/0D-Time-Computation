@@ -72,7 +72,7 @@ function main()::Nothing
 
     # Locking conditions
     local array_lock::SpinLock = SpinLock()
-    local geometry_lock::SpinLock = SpinLock()
+    local random_lock::SpinLock = SpinLock()
 
     # Outer loop
     @threads for i = 1:max_iterations
@@ -83,10 +83,8 @@ function main()::Nothing
         local materials::Vector{Int32}
         local num_cells::Int64
 
-        # Prevent random number clashing
-        lock(geometry_lock) do
-            (t_delta, t_arr, materials, num_cells) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, generator)
-        end
+        # Prevent random number clashing with lock as argument
+        (t_delta, t_arr, materials, num_cells) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=generator, lock=random_lock)
 
         local first_loop::Bool = true
         local intensity::Vector{Float64} = zeros(num_cells)
@@ -151,7 +149,7 @@ function main()::Nothing
         end
         atomic_add!(iteration_number, 1)
 
-        if (iteration_number[] % convert(Int64, 1e2) == 0)
+        if (iteration_number[] % 100 == 0)
             println(string("Iteration Number ", iteration_number[]))
         end
     end
