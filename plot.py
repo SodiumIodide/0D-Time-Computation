@@ -206,7 +206,7 @@ def main():
         # Intensity
         plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1")
         plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2")
-        plt.plot(homog_nonlinear['time'], homog_nonlinear['intensity'], color='m', linestyle=':', label="Homogeneous")
+        plt.plot(homog_nonlinear['time'], homog_nonlinear['intensity'], color='m', linestyle='--', label="Homogeneous")
         plt.plot(nonlinear['time'], nl_lb_intensity_1, color='b', linestyle=':', label=None)
         plt.plot(nonlinear['time'], nl_ub_intensity_1, color='b', linestyle=':', label=None)
         plt.fill_between(nonlinear['time'], nl_lb_intensity_1, nl_ub_intensity_1, color='b', alpha=0.5)
@@ -227,7 +227,7 @@ def main():
         # Temperature
         plt.plot(nonlinear['time'], nonlinear['temperature1'], color='b', label="Material 1")
         plt.plot(nonlinear['time'], nonlinear['temperature2'], color='r', label="Material 2")
-        plt.plot(homog_nonlinear['time'], homog_nonlinear['temperature'], color='g', linestyle=':', label="Homogeneous")
+        plt.plot(homog_nonlinear['time'], homog_nonlinear['temperature'], color='g', linestyle='--', label="Homogeneous")
         plt.plot(nonlinear['time'], nl_lb_temp_1, color='b', linestyle=':', label=None)
         plt.plot(nonlinear['time'], nl_ub_temp_1, color='b', linestyle=':', label=None)
         plt.fill_between(nonlinear['time'], nl_lb_temp_1, nl_ub_temp_1, color='b', alpha=0.5)
@@ -250,7 +250,7 @@ def main():
         # Intensity
         plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1 - Nonlinear")
         plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2 - Nonlinear")
-        plt.plot(homog_nonlinear['time'], homog_nonlinear['intensity'], color='m', linestyle=':', label="Homogeneous - Nonlinear")
+        plt.plot(homog_nonlinear['time'], homog_nonlinear['intensity'], color='m', linestyle='--', label="Homogeneous - Nonlinear")
         plt.plot(linear['time'], linear['intensity1'], color='b', linestyle='-.', label="Material 1 - Linear")
         plt.plot(linear['time'], linear['intensity2'], color='r', linestyle='-.', label="Material 2 - Linear")
         plt.plot(nonlinear['time'], nl_lb_intensity_1, color='b', linestyle=':', label=None)
@@ -273,7 +273,7 @@ def main():
         # Temperature
         plt.plot(nonlinear['time'], nonlinear['temperature1'], color='b', label="Material 1 - Nonlinear")
         plt.plot(nonlinear['time'], nonlinear['temperature2'], color='r', label="Material 2 - Nonlinear")
-        plt.plot(homog_nonlinear['time'], homog_nonlinear['temperature'], color='g', linestyle=':', label="Homogeneous - Nonlinear")
+        plt.plot(homog_nonlinear['time'], homog_nonlinear['temperature'], color='g', linestyle='--', label="Homogeneous - Nonlinear")
         plt.plot(linear['time'], linear['temperature1'], color='b', linestyle='-.', label="Material 1 - Linear")
         plt.plot(linear['time'], linear['temperature2'], color='r', linestyle='-.', label="Material 2 - Linear")
         plt.plot(nonlinear['time'], nl_lb_temp_1, color='b', linestyle=':', label=None)

@@ -68,6 +68,16 @@ function main()::Nothing
         return current_norm / original_norm
     end
 
+    # Variables for variance computation
+    local sum_1_intensity_square::Vector{Float64} = zeros(num_t)
+    local sum_2_intensity_square::Vector{Float64} = zeros(num_t)
+    local sum_1_temp_square::Vector{Float64} = zeros(num_t)
+    local sum_2_temp_square::Vector{Float64} = zeros(num_t)
+    local variance_1_intensity::Vector{Float64} = zeros(num_t)
+    local variance_2_intensity::Vector{Float64} = zeros(num_t)
+    local variance_1_temp::Vector{Float64} = zeros(num_t)
+    local variance_2_temp::Vector{Float64} = zeros(num_t)
+
     print(string("Proceeding with ", Threads.nthreads(), " computational threads...\n"))
 
     # Locking conditions
@@ -139,6 +149,10 @@ function main()::Nothing
 
         local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
         local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
+        local material_intensity_1_square::Vector{Float64} = material_intensity_array[:, 1].^2
+        local material_intensity_2_square::Vector{Float64} = material_intensity_array[:, 2].^2
+        local material_temp_1_square::Vector{Float64} = material_temp_array[:, 1].^2
+        local material_temp_2_square::Vector{Float64} = material_temp_array[:, 2].^2
 
         # Lock the threaded system to increment values
         lock(array_lock) do
@@ -146,20 +160,31 @@ function main()::Nothing
             material_2_intensity += material_intensity_array[:, 2]
             material_1_temp += material_temp_array[:, 1]
             material_2_temp += material_temp_array[:, 2]
+            sum_1_intensity_square += material_intensity_1_square
+            sum_2_intensity_square += material_intensity_2_square
+            sum_1_temp_square += material_temp_1_square
+            sum_2_temp_square += material_temp_2_square
         end
         atomic_add!(iteration_number, 1)
 
-        if (iteration_number[] % 100 == 0)
+        if (iteration_number[] % num_say == 0)
             println(string("Iteration Number ", iteration_number[]))
         end
     end
 
-    material_1_intensity ./= (convert(Float64, max_iterations) * volfrac_1)
-    material_2_intensity ./= (convert(Float64, max_iterations) * volfrac_2)
-    material_1_temp ./= (convert(Float64, max_iterations) * volfrac_1)
-    material_2_temp ./= (convert(Float64, max_iterations) * volfrac_2)
+    local max_iterations_f::Float64 = convert(Float64, max_iterations)
+    local variance_prefix::Float64 = 1.0 / (max_iterations_f * (max_iterations_f - 1.0))
+    variance_1_intensity = variance_prefix .* (max_iterations_f .* sum_1_intensity_square - material_1_intensity.^2)
+    variance_2_intensity = variance_prefix .* (max_iterations_f .* sum_2_intensity_square - material_2_intensity.^2)
+    variance_1_temp = variance_prefix .* (max_iterations_f .* sum_1_temp_square - material_1_temp.^2)
+    variance_2_temp = variance_prefix .* (max_iterations_f .* sum_2_temp_square - material_2_temp.^2)
 
-    tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, temperature1=material_1_temp, intensity2=material_2_intensity, temperature2=material_2_temp)
+    material_1_intensity ./= (max_iterations_f * volfrac_1)
+    material_2_intensity ./= (max_iterations_f * volfrac_2)
+    material_1_temp ./= (max_iterations_f * volfrac_1)
+    material_2_temp ./= (max_iterations_f * volfrac_2)
+
+    tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 
     CSV.write("out/nonlinear/data/nonlinear.csv", tabular)
 

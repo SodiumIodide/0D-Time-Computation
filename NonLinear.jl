@@ -154,7 +154,7 @@ function main()::Nothing
 
         iteration_number += 1
 
-        if (iteration_number % 100 == 0)
+        if (iteration_number % num_say == 0)
             println(string("Iteration Number ", iteration_number))
         end
 
@@ -165,17 +165,17 @@ function main()::Nothing
 
     local max_iterations_f::Float64 = convert(Float64, max_iterations)
     local variance_prefix::Float64 = 1.0 / (max_iterations_f * (max_iterations_f - 1.0))
-    variance_1_intensity = variance_prefix .* (max_iterations_f .* sum_1_intensity_square - material_1_intensity.^2) ./ volfrac_1
-    variance_2_intensity = variance_prefix .* (max_iterations_f .* sum_2_intensity_square - material_2_intensity.^2) ./ volfrac_2
-    variance_1_temp = variance_prefix .* (max_iterations_f .* sum_1_temp_square - material_1_temp.^2) ./ volfrac_1
-    variance_2_temp = variance_prefix .* (max_iterations_f .* sum_2_temp_square - material_2_temp.^2) ./ volfrac_2
+    variance_1_intensity = variance_prefix .* (max_iterations_f .* sum_1_intensity_square - material_1_intensity.^2)
+    variance_2_intensity = variance_prefix .* (max_iterations_f .* sum_2_intensity_square - material_2_intensity.^2)
+    variance_1_temp = variance_prefix .* (max_iterations_f .* sum_1_temp_square - material_1_temp.^2)
+    variance_2_temp = variance_prefix .* (max_iterations_f .* sum_2_temp_square - material_2_temp.^2)
 
     material_1_intensity ./= (max_iterations_f * volfrac_1)
     material_2_intensity ./= (max_iterations_f * volfrac_2)
     material_1_temp ./= (max_iterations_f * volfrac_1)
     material_2_temp ./= (max_iterations_f * volfrac_2)
 
-    tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_1_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
+    tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 
     CSV.write("out/nonlinear/data/nonlinear.csv", tabular)
 
