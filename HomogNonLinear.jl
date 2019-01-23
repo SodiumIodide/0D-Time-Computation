@@ -3,7 +3,6 @@
 include("GeometryGen.jl")
 include("MeshMap.jl")
 include("Constants.jl")
-#using Plots
 using LinearAlgebra
 using DataFrames
 using CSV
@@ -120,18 +119,6 @@ function main()::Nothing
     tabular::DataFrame = DataFrame(time=times, intensity=material_intensity, temperature=material_temp)
 
     CSV.write("out/nonlinear/data/homog_nonlinear.csv", tabular)
-
-#    plot(times, material_intensity, label="Intensity", lc=:magenta, ls=:solid, lw=3)
-#    plot!(yscale=:log10, xscale=:log10,
-#        title="Homogeneous Intensity Plot", xlabel="Time - ct (cm)", ylabel="Intensity (erg/cm^2-s)",
-#        legend=:best, ylims=plot_limits_log10(material_intensity))
-#    png("out/nonlinear/homog_intensity")
-
-#    plot(times, material_temp, label="Temperature", lc=:green, ls=:solid, lw=3)
-#    plot!(yscale=:log10, xscale=:log10,
-#        title="Homogeneous Temperature Plot", xlabel="Time - ct (cm)", ylabel="Temperature (eV)",
-#        legend=:best, ylims=plot_limits_log10(material_temp))
-#    png("out/nonlinear/homog_temperature")
 
     return nothing
 end
