@@ -80,25 +80,18 @@ function main()::Nothing
 
     # Outer loop
     while (cont_calc_outer)
-        local intensity_value::Float64
-        local temp_value::Float64
-
         local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=generator)
 
-        local first_loop::Bool = true
         local intensity::Vector{Float64} = zeros(num_cells)
         local temp::Vector{Float64} = zeros(num_cells)
+
+        # First loop uses initial conditions
+        local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
 
         # Inner loop
         for (index, material) in enumerate(materials)
             local delta_t_unstruct::Float64 = t_delta[index]
             local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = (material == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
-
-            # Set initial conditions
-            if (first_loop)
-                first_loop = false
-                (intensity_value, temp_value) = (init_intensity, init_temp)
-            end
 
             local original_terms::Vector{Float64} = [
                 intensity_value,

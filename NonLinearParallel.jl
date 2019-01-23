@@ -78,7 +78,7 @@ function main()::Nothing
     local variance_1_temp::Vector{Float64} = zeros(num_t)
     local variance_2_temp::Vector{Float64} = zeros(num_t)
 
-    print(string("Proceeding with ", Threads.nthreads(), " computational threads...\n"))
+    print(string("Proceeding with ", nthreads(), " computational threads...\n"))
 
     # Locking conditions
     local array_lock::SpinLock = SpinLock()
@@ -96,20 +96,16 @@ function main()::Nothing
         # Prevent random number clashing with lock as argument
         (t_delta, t_arr, materials, num_cells) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=generator, lock=random_lock)
 
-        local first_loop::Bool = true
         local intensity::Vector{Float64} = zeros(num_cells)
         local temp::Vector{Float64} = zeros(num_cells)
+
+        # First loop uses initial conditions
+        (intensity_value, temp_value) = (init_intensity, init_temp)
 
         # Inner loop
         for (index, material) in enumerate(materials)
             local delta_t_unstruct::Float64 = t_delta[index]
             local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = (material == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
-
-            # Set initial conditions
-            if (first_loop)
-                first_loop = false
-                (intensity_value, temp_value) = (init_intensity, init_temp)
-            end
 
             local original_terms::Vector{Float64} = [
                 intensity_value,

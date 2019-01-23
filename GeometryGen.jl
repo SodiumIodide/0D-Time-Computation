@@ -40,11 +40,7 @@ module GeometryGen
         else
             rand_num = rand(rng, Float64)
         end
-        if (rand_num < prob_a)
-            material_num = 1
-        else
-            material_num = 2
-        end
+        material_num = (rand_num < prob_a) ? 1 : 2
 
         # Loop to build geometry
         while (cons_time < end_time)
@@ -58,11 +54,7 @@ module GeometryGen
             end
 
             # Assign a chord length based on material number
-            if (material_num == 1)
-                chord = chord_a  # s
-            else
-                chord = chord_b  # s
-            end
+            chord = (material_num == 1) ? chord_a : chord_b  # s
 
             # Calculate and append the material length
             time = chord * (-log(rand_num))  # s
@@ -83,11 +75,7 @@ module GeometryGen
             end
 
             # Update material number
-            if (material_num == 1)
-                material_num = 2
-            else
-                material_num = 1
-            end
+            material_num = (material_num == 1) ? 2 : 1
         end
 
         return (x_delta, x_arr, materials, num_cells)
