@@ -12,7 +12,7 @@ CSVPATH = f"{PLOTPATH}/data"
 
 def main():
     '''Main function'''
-    h_exists, he_exists, exists, l_exists = True, True, True, True
+    h_exists, he_exists, exists, l_exists, mc_exists = True, True, True, True, True
     #time,intensity,temperature
     try:
         homog_nonlinear = pandas.read_csv(f"{CSVPATH}/homog_nonlinear.csv")
@@ -33,6 +33,11 @@ def main():
         linear = pandas.read_csv(f"{CSVPATH}/linear.csv")
     except FileNotFoundError:
         l_exists = False
+    #time,intensity1,varintensity1,temperature1,vartemperature1,intensity2,varintensity2,temperature2,vartemperature2
+    try:
+        nonlinear_mc = pandas.read_csv(f"{CSVPATH}/nonlinearmc.csv")
+    except FileNotFoundError:
+        mc_exists = False
 
     # IMPLICIT PLOTS
     if h_exists:
@@ -44,6 +49,7 @@ def main():
         plt.xscale("log")
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/homog_intensity.png")
         plt.cla()
         plt.clf()
@@ -56,6 +62,7 @@ def main():
         plt.xscale("log")
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/homog_temperature.png")
         plt.cla()
         plt.clf()
@@ -69,6 +76,7 @@ def main():
         plt.xscale("log")
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/exp_homog_intensity.png")
         plt.cla()
         plt.clf()
@@ -81,6 +89,7 @@ def main():
         plt.xscale("log")
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/exp_homog_temperature.png")
         plt.cla()
         plt.clf()
@@ -97,6 +106,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/imp_exp_homog_intensity.png")
         plt.cla()
         plt.clf()
@@ -111,6 +121,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/imp_exp_homog_temperature.png")
         plt.cla()
         plt.clf()
@@ -147,6 +158,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/intensity.png")
         plt.cla()
         plt.clf()
@@ -167,7 +179,66 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/temperature.png")
+        plt.cla()
+        plt.clf()
+
+    # MONTE CARLO PLOTS
+    if mc_exists:
+        # Standard deviation computing
+        mc_nl_std_intensity_1 = nonlinear_mc['varintensity1'].apply(np.sqrt)
+        mc_nl_std_intensity_2 = nonlinear_mc['varintensity2'].apply(np.sqrt)
+        mc_nl_std_temp_1 = nonlinear_mc['vartemperature1'].apply(np.sqrt)
+        mc_nl_std_temp_2 = nonlinear_mc['vartemperature2'].apply(np.sqrt)
+        mc_nl_lb_intensity_1 = nonlinear_mc['intensity1'] - mc_nl_std_intensity_1
+        mc_nl_ub_intensity_1 = nonlinear_mc['intensity1'] + mc_nl_std_intensity_1
+        mc_nl_lb_intensity_2 = nonlinear_mc['intensity2'] - mc_nl_std_intensity_2
+        mc_nl_ub_intensity_2 = nonlinear_mc['intensity2'] + mc_nl_std_intensity_2
+        mc_nl_lb_temp_1 = nonlinear_mc['temperature1'] - mc_nl_std_temp_1
+        mc_nl_ub_temp_1 = nonlinear_mc['temperature1'] + mc_nl_std_temp_1
+        mc_nl_lb_temp_2 = nonlinear_mc['temperature2'] - mc_nl_std_temp_2
+        mc_nl_ub_temp_2 = nonlinear_mc['temperature2'] + mc_nl_std_temp_2
+
+        # Intensity
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='b', label="Material 1")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', label="Material 2")
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_1, color='b', linestyle=':', label=None)
+        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_intensity_1, mc_nl_ub_intensity_1, color='b', alpha=0.5)
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_2, color='r', linestyle=':', label=None)
+        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_intensity_2, mc_nl_ub_intensity_2, color='r', alpha=0.5)
+        plt.title("Monte Carlo Intensity Plot")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/intensity_mc.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='b', label="Material 1")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='r', label="Material 2")
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_1, color='b', linestyle=':', label=None)
+        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_temp_1, mc_nl_ub_temp_1, color='b', alpha=0.5)
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_2, color='r', linestyle=':', label=None)
+        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_temp_2, mc_nl_ub_temp_2, color='r', alpha=0.5)
+        plt.title("Monte Carlo Temperature Plot")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Temperature (eV)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/temperature_mc.png")
         plt.cla()
         plt.clf()
 
@@ -183,6 +254,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/linear_intensity.png")
         plt.cla()
         plt.clf()
@@ -197,7 +269,44 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/linear_temperature.png")
+        plt.cla()
+        plt.clf()
+
+    # REALIZATIONS VS MC COMPARISON
+    if exists and h_exists:
+        # Intensity
+        plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1 - Realizations")
+        plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2 - Realizations")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='b', linestyle='--', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', linestyle='--', label="Material 2 - Monte Carlo")
+        plt.title("Realizations and Monte Carlo Intensity")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity(erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realization_mc_intensity.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear['time'], nonlinear['temperature1'], color='b', label="Material 1 - Realizations")
+        plt.plot(nonlinear['time'], nonlinear['temperature2'], color='r', label="Material 2 - Realizations")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='b', linestyle='--', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='r', linestyle='--', label="Material 2 - Monte Carlo")
+        plt.title("Realizations and Monte Carlo Temperature")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Temperature (eV)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realization_mc_temperature.png")
         plt.cla()
         plt.clf()
 
@@ -220,6 +329,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/intensity_comp.png")
         plt.cla()
         plt.clf()
@@ -241,6 +351,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/temperature_comp.png")
         plt.cla()
         plt.clf()
@@ -266,6 +377,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/intensity_full_comp.png")
         plt.cla()
         plt.clf()
@@ -289,6 +401,7 @@ def main():
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.legend(loc="best")
+        plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/temperature_full_comp.png")
         plt.cla()
         plt.clf()
