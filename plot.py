@@ -283,7 +283,7 @@ def main():
         plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', linestyle='--', label="Material 2 - Monte Carlo")
         plt.title("Realizations and Monte Carlo Intensity")
         plt.xlabel("Time - ct (cm)")
-        plt.ylabel("Intensity(erg/cm^2-s)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
         plt.xscale("log")
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
