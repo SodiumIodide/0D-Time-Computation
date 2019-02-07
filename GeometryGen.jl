@@ -3,10 +3,7 @@ module GeometryGen
 
     using Random
 
-    function get_geometry(chord_a::Float64, chord_b::Float64, end_time::Float64, num_divs::Int64; rng::MersenneTwister=MersenneTwister(1234), kwargs...)::Tuple{Vector{Float64}, Vector{Float64}, Vector{Int32}, Float64}
-        # Parallel lock
-        local lockpassed::Bool = haskey(kwargs, :lock)
-
+    function get_geometry(chord_a::Float64, chord_b::Float64, end_time::Float64, num_divs::Int64; rng::MersenneTwister=MersenneTwister(1234))::Tuple{Vector{Float64}, Vector{Float64}, Vector{Int32}, Float64}
         # Computational utilities
         local material_num::Int32
         local rand_num::Float64
@@ -27,31 +24,19 @@ module GeometryGen
         local sample_time::Float64 = chord * (-log(0.5))
         local est_size::Int64 = convert(Int64, ceil(end_time / sample_time * num_divs))
 
-        sizehint!(x_delta, est_size)
-        sizehint!(materials, est_size)
-        sizehint!(x_arr, est_size)
+        #sizehint!(x_delta, est_size)
+        #sizehint!(materials, est_size)
+        #sizehint!(x_arr, est_size)
 
         # Determine first material to use
         local prob_a::Float64 = chord_a / (chord_a + chord_b)
-        if (lockpassed)
-            lock(kwargs[:lock]) do
-                rand_num = rand(rng, Float64)
-            end
-        else
-            rand_num = rand(rng, Float64)
-        end
+        rand_num = rand(rng, Float64)
         material_num = (rand_num < prob_a) ? 1 : 2
 
         # Loop to build geometry
         while (cons_time < end_time)
             # Generate a random number
-            if (lockpassed)
-                lock(kwargs[:lock]) do
-                    rand_num = rand(rng, Float64)
-                end
-            else
-                rand_num = rand(rng, Float64)
-            end
+            rand_num = rand(rng, Float64)
 
             # Assign a chord length based on material number
             chord = (material_num == 1) ? chord_a : chord_b  # s

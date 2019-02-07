@@ -8,11 +8,11 @@ global const t_init = 0.0  # s
 global const num_t = convert(Int64, 1e4)
 global const delta_t = (t_max - t_init) / num_t  # s
 global const chord_1 = 1.0 / sol  # s
-global const chord_2 = 5.0 / sol  # s
+global const chord_2 = 20.0 / sol  # s
 global const dens_1 = 1.0  # g/cm^3
 global const dens_2 = 1.0  # g/cm^3
 global const opacity_1 = 1.0  # cm^-1
-global const opacity_2 = 5.0  # cm^-1
+global const opacity_2 = 20.0  # cm^-1
 global const spec_heat_1 = 1.0  # erg/g-eV
 global const spec_heat_2 = 1.0  # erg/g-eV
 global const volfrac_1 = chord_1 / (chord_1 + chord_2)
@@ -31,4 +31,5 @@ global const init_intensity = 1e0  # erg/cm^2-s
 global const init_temp = 1e0  # eV
 
 # Iteration condition
-global const tolerance = convert(Float64, eps(Float32))
+#global const tolerance = convert(Float64, eps(Float32))
+global const tolerance = 1e-5

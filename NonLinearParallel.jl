@@ -4,6 +4,7 @@ include("GeometryGen.jl")
 include("MeshMap.jl")
 include("Constants.jl")
 using Random
+using Future
 using LinearAlgebra
 using DataFrames
 using CSV
@@ -11,7 +12,9 @@ using Base.Threads
 
 function main()::Nothing
     # Iteration condition
-    local generator::MersenneTwister = MersenneTwister(1234)
+    local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
+        [m; accumulate(Future.randjump, fill(big(10)^20, nthreads()-1), init=m)]
+    end
 
     # Computational values
     local iteration_number::Atomic{Int64} = Atomic{Int64}(0)
@@ -78,16 +81,24 @@ function main()::Nothing
     local variance_1_temp::Vector{Float64} = zeros(num_t)
     local variance_2_temp::Vector{Float64} = zeros(num_t)
 
-    println(string("Proceeding with ", nthreads(), " computational threads..."))
+    # Parallel arrays
+    local thread_1_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_intensity_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_intensity_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_temp_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_temp_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_hits::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_hits::Array{Float64, 2} = zeros(nthreads(), num_t)
 
-    # Locking conditions
-    local array_lock::SpinLock = SpinLock()
-    local random_lock::SpinLock = SpinLock()
+    println(string("Proceeding with ", nthreads(), " computational threads..."))
 
     # Outer loop
     @threads for i = 1:max_iterations
         # Prevent random number clashing with lock as argument
-        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=generator, lock=random_lock)
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
 
         local intensity::Vector{Float64} = zeros(num_cells)
         local temp::Vector{Float64} = zeros(num_cells)
@@ -143,23 +154,31 @@ function main()::Nothing
         local material_temp_1_square::Vector{Float64} = material_temp_array[:, 1].^2
         local material_temp_2_square::Vector{Float64} = material_temp_array[:, 2].^2
 
-        # Lock the threaded system to increment values
-        lock(array_lock) do
-            material_1_intensity += material_intensity_array[:, 1]
-            material_2_intensity += material_intensity_array[:, 2]
-            material_1_temp += material_temp_array[:, 1]
-            material_2_temp += material_temp_array[:, 2]
-            sum_1_intensity_square += material_intensity_1_square
-            sum_2_intensity_square += material_intensity_2_square
-            sum_1_temp_square += material_temp_1_square
-            sum_2_temp_square += material_temp_2_square
-        end
+        thread_1_intensity[threadid(), :] += material_intensity_array[:, 1]
+        thread_2_intensity[threadid(), :] += material_intensity_array[:, 2]
+        thread_1_temp[threadid(), :] += material_temp_array[:, 1]
+        thread_2_temp[threadid(), :] += material_temp_array[:, 2]
+        thread_1_intensity_square[threadid(), :] += material_intensity_1_square
+        thread_2_intensity_square[threadid(), :] += material_intensity_2_square
+        thread_1_temp_square[threadid(), :] += material_temp_1_square
+        thread_2_temp_square[threadid(), :] += material_temp_2_square
+
         atomic_add!(iteration_number, 1)
 
+        # Need to reference Core namespace for thread-safe printing
         if (iteration_number[] % num_say == 0)
-            println(string("Iteration Number ", iteration_number[]))
+            Core.println(string("Iteration Number ", iteration_number[]))
         end
     end
+
+    material_1_intensity = vec(sum(thread_1_intensity, dims=1))
+    material_2_intensity = vec(sum(thread_2_intensity, dims=1))
+    material_1_temp = vec(sum(thread_1_temp, dims=1))
+    material_2_temp = vec(sum(thread_2_temp, dims=1))
+    sum_1_intensity_square = vec(sum(thread_1_intensity_square, dims=1))
+    sum_2_intensity_square = vec(sum(thread_2_intensity_square, dims=1))
+    material_1_hits = vec(sum(thread_1_hits, dims=1))
+    material_2_hits = vec(sum(thread_2_hits, dims=1))
 
     local max_iterations_f::Float64 = convert(Float64, max_iterations)
     local variance_prefix::Float64 = 1.0 / (max_iterations_f * (max_iterations_f - 1.0))

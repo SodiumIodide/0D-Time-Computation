@@ -5,10 +5,13 @@ using Random
 using DataFrames
 using CSV
 using Base.Threads
+using Future
 
 function main()::Nothing
     # Iteration condition
-    local generator::MersenneTwister = MersenneTwister(1234)
+    local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
+        [m; accumulate(Future.randjump, fill(big(10)^20, nthreads()-1), init=m)]
+    end
 
     # Computational values
     local iteration_number::Atomic{Int64} = Atomic{Int64}(0)
@@ -62,25 +65,30 @@ function main()::Nothing
     local variance_1_temp::Vector{Float64} = zeros(num_t)
     local variance_2_temp::Vector{Float64} = zeros(num_t)
 
+    # Parallel arrays
+    local thread_1_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_intensity_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_intensity_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_temp_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_temp_square::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_1_hits::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local thread_2_hits::Array{Float64, 2} = zeros(nthreads(), num_t)
+
     println(string("Proceeding with ", nthreads(), " computational threads..."))
 
-    # Locking conditions
-    #local array_lock_1::SpinLock = SpinLock()
-    #local array_lock_2::SpinLock = SpinLock()
-    #local random_lock::SpinLock = SpinLock()
-
     # Outer loop
-    #@threads for i = 1:max_iterations
-    for i = 1:max_iterations
+    @threads for i = 1:max_iterations
+    #for i = 1:max_iterations
         local rand_num::Float64
 
         # First loop uses initial conditions
         local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
 
         # Sample initial starting material
-        #lock(random_lock)
-        rand_num = rand(generator, Float64)
-        #unlock(random_lock)
+        rand_num = rand(gen_array[threadid()], Float64)
         local material_num::Int32 = (rand_num < prob_1) ? 1 : 2
 
         # Inner loop
@@ -88,9 +96,7 @@ function main()::Nothing
             local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
 
             # Sample whether material changes
-            #lock(random_lock) do
-            rand_num = rand(generator, Float64)
-            #unlock(random_lock)
+            rand_num = rand(gen_array[threadid()], Float64)
 
             if (rand_num > change_prob)
                 local opacity::Float64 = sigma_a(opacity_term, temp_value)
@@ -102,21 +108,17 @@ function main()::Nothing
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
 
                 if (material_num == 1)
-                    #lock(array_lock_1)
-                    material_1_intensity[index] += intensity_value  # erg/cm^2-s
-                    material_1_temp[index] += temp_value  # eV
-                    sum_1_intensity_square[index] += intensity_value^2
-                    sum_1_temp_square[index] += temp_value^2
-                    material_1_hits[index] += 1.0
-                    #unlock(array_lock_1)
+                    thread_1_intensity[threadid(), index] += intensity_value  # erg/cm^2-s
+                    thread_1_temp[threadid(), index] += temp_value  # eV
+                    thread_1_intensity_square[threadid(), index] += intensity_value^2
+                    thread_1_temp_square[threadid(), index] += temp_value^2
+                    thread_1_hits[threadid(), index] += 1.0
                 else
-                    #lock(array_lock_2)
-                    material_2_intensity[index] += intensity_value  # erg/cm^2-s
-                    material_2_temp[index] += temp_value  # eV
-                    sum_2_intensity_square[index] += intensity_value^2
-                    sum_2_temp_square[index] += temp_value^2
-                    material_2_hits[index] += 1.0
-                    #unlock(array_lock_2)
+                    thread_2_intensity[threadid(), index] += intensity_value  # erg/cm^2-s
+                    thread_2_temp[threadid(), index] += temp_value  # eV
+                    thread_2_intensity_square[threadid(), index] += intensity_value^2
+                    thread_2_temp_square[threadid(), index] += temp_value^2
+                    thread_2_hits[threadid(), index] += 1.0
                 end
             else
                 material_num = (material_num == 1) ? 2 : 1
@@ -125,10 +127,20 @@ function main()::Nothing
 
         atomic_add!(iteration_number, 1)
 
+        # Need to reference Core namespace for thread-safe printing
         if (iteration_number[] % num_say == 0)
-            println(string("Iteration Number ", iteration_number[]))
+            Core.println(string("Iteration Number ", iteration_number[]))
         end
     end
+
+    material_1_intensity = vec(sum(thread_1_intensity, dims=1))
+    material_2_intensity = vec(sum(thread_2_intensity, dims=1))
+    material_1_temp = vec(sum(thread_1_temp, dims=1))
+    material_2_temp = vec(sum(thread_2_temp, dims=1))
+    sum_1_intensity_square = vec(sum(thread_1_intensity_square, dims=1))
+    sum_2_intensity_square = vec(sum(thread_2_intensity_square, dims=1))
+    material_1_hits = vec(sum(thread_1_hits, dims=1))
+    material_2_hits = vec(sum(thread_2_hits, dims=1))
 
     local max_iterations_f::Float64 = convert(Float64, max_iterations)
     local variance_prefix::Float64 = 1.0 / (max_iterations_f * (max_iterations_f - 1.0))
