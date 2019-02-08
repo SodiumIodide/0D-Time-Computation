@@ -95,9 +95,11 @@ function main()::Nothing
 
     println(string("Proceeding with ", nthreads(), " computational threads..."))
 
+    local printlock::SpinLock = SpinLock()
+
     # Outer loop
     @threads for i = 1:max_iterations
-        # Prevent random number clashing with lock as argument
+        # Prevent random number clashing with discrete generators
         local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
 
         local intensity::Vector{Float64} = zeros(num_cells)
@@ -167,7 +169,9 @@ function main()::Nothing
 
         # Need to reference Core namespace for thread-safe printing
         if (iteration_number[] % num_say == 0)
-            Core.println(string("Iteration Number ", iteration_number[]))
+            lock(printlock) do
+                Core.println(string("Iteration Number ", iteration_number[]))
+            end
         end
     end
 

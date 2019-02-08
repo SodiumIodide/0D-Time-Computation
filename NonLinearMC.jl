@@ -79,9 +79,10 @@ function main()::Nothing
 
     println(string("Proceeding with ", nthreads(), " computational threads..."))
 
+    local printlock::SpinLock = SpinLock()
+
     # Outer loop
     @threads for i = 1:max_iterations
-    #for i = 1:max_iterations
         local rand_num::Float64
 
         # First loop uses initial conditions
@@ -129,7 +130,9 @@ function main()::Nothing
 
         # Need to reference Core namespace for thread-safe printing
         if (iteration_number[] % num_say == 0)
-            Core.println(string("Iteration Number ", iteration_number[]))
+            lock(printlock) do
+                Core.println(string("Iteration Number ", iteration_number[]))
+            end
         end
     end
 
