@@ -1,12 +1,16 @@
 #!/usr/bin/env julia
 
 include("GeometryGen.jl")
+using .GeometryGen
 include("MeshMap.jl")
-include("Constants.jl")
+using .MeshMap
+include("RunningStatistics.jl")
+using .RunningStatistics
 using Random
 using LinearAlgebra
 using DataFrames
 using CSV
+include("Constants.jl")
 
 function main()::Nothing
     # Iteration condition
@@ -15,12 +19,6 @@ function main()::Nothing
 
     # Computational values
     local iteration_number::Int64 = 0
-    local material_1_intensity::Vector{Float64} = zeros(num_t)
-    local material_2_intensity::Vector{Float64} = zeros(num_t)
-    local unconditional_intensity::Vector{Float64} = zeros(num_t)
-    local material_1_temp::Vector{Float64} = zeros(num_t)
-    local material_2_temp::Vector{Float64} = zeros(num_t)
-    local unconditional_temp::Vector{Float64} = zeros(num_t)
     local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
 
     function sigma_a(opacity_term::Float64, temp::Float64)::Float64
@@ -68,15 +66,11 @@ function main()::Nothing
         return current_norm / original_norm
     end
 
-    # Varibles for variance computation
-    local sum_1_intensity_square::Vector{Float64} = zeros(num_t)
-    local sum_2_intensity_square::Vector{Float64} = zeros(num_t)
-    local sum_1_temp_square::Vector{Float64} = zeros(num_t)
-    local sum_2_temp_square::Vector{Float64} = zeros(num_t)
-    local variance_1_intensity::Vector{Float64} = zeros(num_t)
-    local variance_2_intensity::Vector{Float64} = zeros(num_t)
-    local variance_1_temp::Vector{Float64} = zeros(num_t)
-    local variance_2_temp::Vector{Float64} = zeros(num_t)
+    # Arrays for online computation
+    local stat_1_intensity::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
+    local stat_2_intensity::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
+    local stat_1_temp::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
+    local stat_2_temp::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
 
     # Outer loop
     while (cont_calc_outer)
@@ -131,19 +125,16 @@ function main()::Nothing
 
         local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
         local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
-        local material_intensity_1_square::Vector{Float64} = material_intensity_array[:, 1].^2
-        local material_intensity_2_square::Vector{Float64} = material_intensity_array[:, 2].^2
-        local material_temp_1_square::Vector{Float64} = material_temp_array[:, 1].^2
-        local material_temp_2_square::Vector{Float64} = material_temp_array[:, 2].^2
 
-        material_1_intensity += material_intensity_array[:, 1]
-        material_2_intensity += material_intensity_array[:, 2]
-        material_1_temp += material_temp_array[:, 1]
-        material_2_temp += material_temp_array[:, 2]
-        sum_1_intensity_square += material_intensity_1_square
-        sum_2_intensity_square += material_intensity_2_square
-        sum_1_temp_square += material_temp_1_square
-        sum_2_temp_square += material_temp_2_square
+        for k in 1:num_t
+            if (material_intensity_array[k, 1] != 0.0)
+                push(stat_1_intensity[k], material_intensity_array[k, 1])  # erg/cm^2-s
+                push(stat_1_temp[k], material_temp_array[k, 1])  # eV
+            else
+                push(stat_2_intensity[k], material_intensity_array[k, 2])  # erg/cm^2-s
+                push(stat_2_temp[k], material_temp_array[k, 2])  # eV
+            end
+        end
 
         iteration_number += 1
 
@@ -156,17 +147,14 @@ function main()::Nothing
         end
     end
 
-    local max_iterations_f::Float64 = convert(Float64, max_iterations)
-    local variance_prefix::Float64 = 1.0 / (max_iterations_f * (max_iterations_f - 1.0))
-    variance_1_intensity = variance_prefix .* (max_iterations_f .* sum_1_intensity_square - material_1_intensity.^2)
-    variance_2_intensity = variance_prefix .* (max_iterations_f .* sum_2_intensity_square - material_2_intensity.^2)
-    variance_1_temp = variance_prefix .* (max_iterations_f .* sum_1_temp_square - material_1_temp.^2)
-    variance_2_temp = variance_prefix .* (max_iterations_f .* sum_2_temp_square - material_2_temp.^2)
-
-    material_1_intensity ./= (max_iterations_f * volfrac_1)
-    material_2_intensity ./= (max_iterations_f * volfrac_2)
-    material_1_temp ./= (max_iterations_f * volfrac_1)
-    material_2_temp ./= (max_iterations_f * volfrac_2)
+    local material_1_intensity::Vector{Float64} = mean.(stat_1_intensity)
+    local material_2_intensity::Vector{Float64} = mean.(stat_2_intensity)
+    local material_1_temp::Vector{Float64} = mean.(stat_1_temp)
+    local material_2_temp::Vector{Float64} = mean.(stat_2_temp)
+    local variance_1_intensity::Vector{Float64} = variance.(stat_1_intensity)
+    local variance_2_intensity::Vector{Float64} = variance.(stat_2_intensity)
+    local variance_1_temp::Vector{Float64} = variance.(stat_1_temp)
+    local variance_2_temp::Vector{Float64} = variance.(stat_2_temp)
 
     tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 

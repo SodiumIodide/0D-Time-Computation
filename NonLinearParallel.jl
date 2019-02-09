@@ -4,6 +4,8 @@ include("GeometryGen.jl")
 using .GeometryGen
 include("MeshMap.jl")
 using .MeshMap
+include("RunningStatistics.jl")
+using .RunningStatistics
 using Random
 using Future
 using LinearAlgebra

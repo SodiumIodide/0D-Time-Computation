@@ -19,7 +19,7 @@ global const volfrac_1 = chord_1 / (chord_1 + chord_2)
 global const volfrac_2 = 1.0 - volfrac_1
 global const sb_const = 5.6704e-5 * 11604.525^4  # erg/cm^2-s-eV^4
 global const num_divs = convert(Int64, 1e4)
-global const max_iterations = convert(Int64, 1e5)
+global const max_iterations = convert(Int64, 1e4)
 global const num_say = convert(Int64, 1e2)
 
 # Linear factors

@@ -73,6 +73,7 @@ def main():
         plt.plot(homog_nonlinear_exp['time'], homog_nonlinear_exp['intensity'], color='m')
         plt.title("Explicit Homogeneous Intensity Plot")
         plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
         plt.xscale("log")
         plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
