@@ -1,14 +1,16 @@
 #!/usr/bin/env julia
 
 include("GeometryGen.jl")
+using .GeometryGen
 include("MeshMap.jl")
-include("Constants.jl")
+using .MeshMap
 using Random
 using Future
 using LinearAlgebra
 using DataFrames
 using CSV
 using Base.Threads
+include("Constants.jl")
 
 function main()::Nothing
     # Iteration condition
@@ -17,13 +19,6 @@ function main()::Nothing
     end
 
     # Computational values
-    local iteration_number::Atomic{Int64} = Atomic{Int64}(0)
-    local material_1_intensity::Vector{Float64} = zeros(num_t)
-    local material_2_intensity::Vector{Float64} = zeros(num_t)
-    local unconditional_intensity::Vector{Float64} = zeros(num_t)
-    local material_1_temp::Vector{Float64} = zeros(num_t)
-    local material_2_temp::Vector{Float64} = zeros(num_t)
-    local unconditional_temp::Vector{Float64} = zeros(num_t)
     local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
 
     function sigma_a(opacity_term::Float64, temp::Float64)::Float64
@@ -71,27 +66,11 @@ function main()::Nothing
         return current_norm / original_norm
     end
 
-    # Variables for variance computation
-    local sum_1_intensity_square::Vector{Float64} = zeros(num_t)
-    local sum_2_intensity_square::Vector{Float64} = zeros(num_t)
-    local sum_1_temp_square::Vector{Float64} = zeros(num_t)
-    local sum_2_temp_square::Vector{Float64} = zeros(num_t)
-    local variance_1_intensity::Vector{Float64} = zeros(num_t)
-    local variance_2_intensity::Vector{Float64} = zeros(num_t)
-    local variance_1_temp::Vector{Float64} = zeros(num_t)
-    local variance_2_temp::Vector{Float64} = zeros(num_t)
-
     # Parallel arrays
-    local thread_1_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_2_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_1_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_2_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_1_intensity_square::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_2_intensity_square::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_1_temp_square::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_2_temp_square::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_1_hits::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_2_hits::Array{Float64, 2} = zeros(nthreads(), num_t)
+    local stat_1_intensity::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
+    local stat_2_intensity::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
+    local stat_1_temp::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
+    local stat_2_temp::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
 
     println(string("Proceeding with ", nthreads(), " computational threads..."))
 
@@ -100,7 +79,7 @@ function main()::Nothing
     # Outer loop
     @threads for i = 1:max_iterations
         # Prevent random number clashing with discrete generators
-        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
 
         local intensity::Vector{Float64} = zeros(num_cells)
         local temp::Vector{Float64} = zeros(num_cells)
@@ -151,50 +130,49 @@ function main()::Nothing
 
         local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
         local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
-        local material_intensity_1_square::Vector{Float64} = material_intensity_array[:, 1].^2
-        local material_intensity_2_square::Vector{Float64} = material_intensity_array[:, 2].^2
-        local material_temp_1_square::Vector{Float64} = material_temp_array[:, 1].^2
-        local material_temp_2_square::Vector{Float64} = material_temp_array[:, 2].^2
 
-        thread_1_intensity[threadid(), :] += material_intensity_array[:, 1]
-        thread_2_intensity[threadid(), :] += material_intensity_array[:, 2]
-        thread_1_temp[threadid(), :] += material_temp_array[:, 1]
-        thread_2_temp[threadid(), :] += material_temp_array[:, 2]
-        thread_1_intensity_square[threadid(), :] += material_intensity_1_square
-        thread_2_intensity_square[threadid(), :] += material_intensity_2_square
-        thread_1_temp_square[threadid(), :] += material_temp_1_square
-        thread_2_temp_square[threadid(), :] += material_temp_2_square
-
-        atomic_add!(iteration_number, 1)
+        for k in 1:num_t
+            if (material_intensity_array[k, 1] != 0.0)
+                push(stat_1_intensity[threadid(), k], material_intensity_array[k, 1])  # erg/cm^2-s
+                push(stat_1_temp[threadid(), k], material_temp_array[k, 1])  # eV
+            else
+                push(stat_2_intensity[threadid(), k], material_intensity_array[k, 2])  # erg/cm^2-s
+                push(stat_2_temp[threadid(), k], material_temp_array[k, 2])  # eV
+            end
+        end
 
         # Need to reference Core namespace for thread-safe printing
-        if (iteration_number[] % num_say == 0)
+        if (i % num_say == 0)
             lock(printlock) do
-                Core.println(string("Iteration Number ", iteration_number[]))
+                Core.println(string("Iteration Number ", i))
             end
         end
     end
 
-    material_1_intensity = vec(sum(thread_1_intensity, dims=1))
-    material_2_intensity = vec(sum(thread_2_intensity, dims=1))
-    material_1_temp = vec(sum(thread_1_temp, dims=1))
-    material_2_temp = vec(sum(thread_2_temp, dims=1))
-    sum_1_intensity_square = vec(sum(thread_1_intensity_square, dims=1))
-    sum_2_intensity_square = vec(sum(thread_2_intensity_square, dims=1))
-    material_1_hits = vec(sum(thread_1_hits, dims=1))
-    material_2_hits = vec(sum(thread_2_hits, dims=1))
+    local num_1::Vector{Float64} = vec(sum(convert.(Float64, num.(stat_1_intensity)), dims=1))
+    local num_2::Vector{Float64} = vec(sum(convert.(Float64, num.(stat_2_intensity)), dims=1))
 
-    local max_iterations_f::Float64 = convert(Float64, max_iterations)
-    local variance_prefix::Float64 = 1.0 / (max_iterations_f * (max_iterations_f - 1.0))
-    variance_1_intensity = variance_prefix .* (max_iterations_f .* sum_1_intensity_square - material_1_intensity.^2)
-    variance_2_intensity = variance_prefix .* (max_iterations_f .* sum_2_intensity_square - material_2_intensity.^2)
-    variance_1_temp = variance_prefix .* (max_iterations_f .* sum_1_temp_square - material_1_temp.^2)
-    variance_2_temp = variance_prefix .* (max_iterations_f .* sum_2_temp_square - material_2_temp.^2)
+    function compute_mean(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64})::Vector{Float64}
+        return vec(sum(mean.(mat_r) .* convert.(Float64, num.(mat_r)), dims=1) ./ num_vec')
+    end
 
-    material_1_intensity ./= (max_iterations_f * volfrac_1)
-    material_2_intensity ./= (max_iterations_f * volfrac_2)
-    material_1_temp ./= (max_iterations_f * volfrac_1)
-    material_2_temp ./= (max_iterations_f * volfrac_2)
+    local material_1_intensity::Vector{Float64} = compute_mean(stat_1_intensity, num_1)
+    local material_2_intensity::Vector{Float64} = compute_mean(stat_2_intensity, num_2)
+    local material_1_temp::Vector{Float64} = compute_mean(stat_1_temp, num_1)
+    local material_2_temp::Vector{Float64} = compute_mean(stat_2_temp, num_2)
+
+    function compute_variance(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64}, mean_vec::Vector{Float64})::Vector{Float64}
+        local prefix::Vector{Float64} = vec((num_vec .- 1.0).^(-1))
+        local first_sum::Vector{Float64} = vec(sum((convert.(Float64, num.(mat_r)) .- 1.0) .* variance.(mat_r), dims=1))
+        local second_sum::Vector{Float64} = vec(sum(convert.(Float64, num.(mat_r)) .* (mean.(mat_r) .- mean_vec').^2, dims=1))
+
+        return prefix .* (first_sum .+ second_sum)
+    end
+
+    local variance_1_intensity::Vector{Float64} = compute_variance(stat_1_intensity, num_1, material_1_intensity)
+    local variance_2_intensity::Vector{Float64} = compute_variance(stat_2_intensity, num_2, material_2_intensity)
+    local variance_1_temp::Vector{Float64} = compute_variance(stat_1_temp, num_1, material_1_temp)
+    local variance_2_temp::Vector{Float64} = compute_variance(stat_2_temp, num_2, material_2_temp)
 
     tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 

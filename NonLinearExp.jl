@@ -16,7 +16,6 @@ include("Constants.jl")
 
 function main()::Nothing
     # Iteration condition
-    local cont_calc_outer::Bool = true
     local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
         [m; accumulate(Future.randjump, fill(big(10)^20, nthreads() - 1), init=m)]
     end
@@ -47,17 +46,7 @@ function main()::Nothing
         return term_1 + term_2 + term_3
     end
 
-    # Varibles for variance computation
-    local variance_1_intensity::Vector{Float64} = zeros(num_t)
-    local variance_2_intensity::Vector{Float64} = zeros(num_t)
-    local variance_1_temp::Vector{Float64} = zeros(num_t)
-    local variance_2_temp::Vector{Float64} = zeros(num_t)
-
     # Parallel arrays
-    local thread_1_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_2_intensity::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_1_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
-    local thread_2_temp::Array{Float64, 2} = zeros(nthreads(), num_t)
     local stat_1_intensity::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
     local stat_2_intensity::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
     local stat_1_temp::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
@@ -99,13 +88,12 @@ function main()::Nothing
         local material_temp_array::Array{Float64, 2} = material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
 
         for k in 1:num_t
-            if (material_intensity_array[k, 1] > 0.0)
-                push(stat_1_intensity[threadid(), k], material_intensity_array[k, 1])
-                push(stat_1_temp[threadid(), k], material_temp_array[k, 1])
-            end
-            if (material_intensity_array[k, 2] > 0.0)
-                push(stat_2_intensity[threadid(), k], material_intensity_array[k, 2])
-                push(stat_2_temp[threadid(), k], material_temp_array[k, 2])
+            if (material_intensity_array[k, 1] != 0.0)
+                push(stat_1_intensity[threadid(), k], material_intensity_array[k, 1])  # erg/cm^2-s
+                push(stat_1_temp[threadid(), k], material_temp_array[k, 1])  # eV
+            else
+                push(stat_2_intensity[threadid(), k], material_intensity_array[k, 2])  # erg/cm^2-s
+                push(stat_2_temp[threadid(), k], material_temp_array[k, 2])  # eV
             end
         end
 
@@ -137,10 +125,10 @@ function main()::Nothing
         return prefix .* (first_sum .+ second_sum)
     end
 
-    variance_1_intensity = compute_variance(stat_1_intensity, num_1, material_1_intensity)
-    variance_2_intensity = compute_variance(stat_2_intensity, num_2, material_2_intensity)
-    variance_1_temp = compute_variance(stat_1_temp, num_1, material_1_temp)
-    variance_2_temp = compute_variance(stat_2_temp, num_2, material_2_temp)
+    local variance_1_intensity::Vector{Float64} = compute_variance(stat_1_intensity, num_1, material_1_intensity)
+    local variance_2_intensity::Vector{Float64} = compute_variance(stat_2_intensity, num_2, material_2_intensity)
+    local variance_1_temp::Vector{Float64} = compute_variance(stat_1_temp, num_1, material_1_temp)
+    local variance_2_temp::Vector{Float64} = compute_variance(stat_2_temp, num_2, material_2_temp)
 
     tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 
