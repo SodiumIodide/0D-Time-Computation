@@ -1,63 +1,18 @@
 #!/usr/bin/env julia
 
 include("GeometryGen.jl")
+using .GeometryGen
 include("MeshMap.jl")
-include("Constants.jl")
+using .MeshMap
+include("RunningStatistics.jl")
+using .RunningStatistics
 using Random
 using Future
 using LinearAlgebra
 using DataFrames
 using CSV
 using Base.Threads
-
-mutable struct RunningStat
-    m_n::Int64
-    m_oldM::Float64
-    m_newM::Float64
-    m_oldS::Float64
-    m_newS::Float64
-end
-
-function clear(r::RunningStat)::Nothing
-    r.m_n = 0
-
-    return nothing
-end
-
-function push(r::RunningStat, x::Float64)::Nothing
-    r.m_n += 1
-
-    # See Knuth TAOCP vol 2, 3rd edition, page 232
-    if (r.m_n == 1)
-        r.m_oldM = r.m_newM = x
-        r.m_oldS = 0.0
-    else
-        r.m_newM = r.m_oldM + (x - r.m_oldM) / r.m_n
-        r.m_newS = r.m_oldS + (x - r.m_oldM) * (x - r.m_newM)
-
-        # Set up for next iteration
-        r.m_oldM = r.m_newM
-        r.m_oldS = r.m_newS
-    end
-
-    return nothing
-end
-
-function num(r::RunningStat)::Int64
-    return r.m_n
-end
-
-function mean(r::RunningStat)::Float64
-    return (r.m_n > 0) ? r.m_newM : 0.0
-end
-
-function variance(r::RunningStat)::Float64
-    return (r.m_n > 1) ? r.m_newS / (r.m_n - 1) : 0.0
-end
-
-function standard_devation(r::RunningStat)::Float64
-    return sqrt(variance(r))
-end
+include("Constants.jl")
 
 function main()::Nothing
     # Iteration condition
@@ -115,7 +70,7 @@ function main()::Nothing
     # Outer loop
     @threads for i = 1:max_iterations
         # Prevent random number clashing with discrete generators
-        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
 
         local intensity::Vector{Float64} = zeros(num_cells)
         local temp::Vector{Float64} = zeros(num_cells)
@@ -140,8 +95,8 @@ function main()::Nothing
             temp[index] = temp_value  # eV
         end
 
-        local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
-        local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
+        local material_intensity_array::Array{Float64, 2} = material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
+        local material_temp_array::Array{Float64, 2} = material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
 
         for k in 1:num_t
             if (material_intensity_array[k, 1] > 0.0)
