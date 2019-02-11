@@ -132,7 +132,7 @@ function main()::Nothing
 
     tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 
-    CSV.write("out/nonlinear/data/nonlinear.csv", tabular)
+    CSV.write("out/nonlinear/data/nonlinear_exp.csv", tabular)
 
     return nothing
 end

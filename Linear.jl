@@ -2,6 +2,8 @@
 
 # Linear.jl
 
+# Uses moment equations for computation
+
 include("Constants.jl")
 using LinearAlgebra
 using DataFrames

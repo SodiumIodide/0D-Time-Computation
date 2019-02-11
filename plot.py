@@ -12,7 +12,7 @@ CSVPATH = f"{PLOTPATH}/data"
 
 def main():
     '''Main function'''
-    h_exists, he_exists, exists, l_exists, mc_exists = True, True, True, True, True
+    h_exists, he_exists, exists, ex_exists, l_exists, mc_exists = True, True, True, True, True, True
     #time,intensity,temperature
     try:
         homog_nonlinear = pandas.read_csv(f"{CSVPATH}/homog_nonlinear.csv")
@@ -28,6 +28,11 @@ def main():
         nonlinear = pandas.read_csv(f"{CSVPATH}/nonlinear.csv")
     except FileNotFoundError:
         exists = False
+    #time,intensity1,varintensity1,temperature1,vartemperature1,intensity2,varintensity2,temperature2,vartemperature2
+    try:
+        nonlinear_exp = pandas.read_csv(f"{CSVPATH}/nonlinear_exp.csv")
+    except FileNotFoundError:
+        ex_exists = False
     #time,intensity1,temperature1,intensity2,temperature2
     try:
         linear = pandas.read_csv(f"{CSVPATH}/linear.csv")
@@ -185,6 +190,64 @@ def main():
         plt.cla()
         plt.clf()
 
+    # REALIZATIONS EXPLICIT PLOTS
+    if ex_exists:
+        # Standard deviation computing
+        ex_nl_std_intensity_1 = nonlinear_exp['varintensity1'].apply(np.sqrt)
+        ex_nl_std_intensity_2 = nonlinear_exp['varintensity2'].apply(np.sqrt)
+        ex_nl_std_temp_1 = nonlinear_exp['vartemperature1'].apply(np.sqrt)
+        ex_nl_std_temp_2 = nonlinear_exp['vartemperature2'].apply(np.sqrt)
+        ex_nl_lb_intensity_1 = nonlinear_exp['intensity1'] - ex_nl_std_intensity_1
+        ex_nl_ub_intensity_1 = nonlinear_exp['intensity1'] + ex_nl_std_intensity_1
+        ex_nl_lb_intensity_2 = nonlinear_exp['intensity2'] - ex_nl_std_intensity_2
+        ex_nl_ub_intensity_2 = nonlinear_exp['intensity2'] + ex_nl_std_intensity_2
+        ex_nl_lb_temp_1 = nonlinear_exp['temperature1'] - ex_nl_std_temp_1
+        ex_nl_ub_temp_1 = nonlinear_exp['temperature1'] + ex_nl_std_temp_1
+        ex_nl_lb_temp_2 = nonlinear_exp['temperature2'] - ex_nl_std_temp_2
+        ex_nl_ub_temp_2 = nonlinear_exp['temperature2'] + ex_nl_std_temp_2
+
+        # Intensity
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['intensity1'], color='b', label="Material 1")
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['intensity2'], color='r', label="Material 2")
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_intensity_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_intensity_1, color='b', linestyle=':', label=None)
+        plt.fill_between(nonlinear_exp['time'], ex_nl_lb_intensity_1, ex_nl_ub_intensity_1, color='b', alpha=0.5)
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_intensity_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_intensity_2, color='r', linestyle=':', label=None)
+        plt.fill_between(nonlinear_exp['time'], ex_nl_lb_intensity_2, ex_nl_ub_intensity_2, color='r', alpha=0.5)
+        plt.title("Explicit Intensity Plot")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/intensity_exp.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['temperature1'], color='b', label="Material 1")
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['temperature2'], color='r', label="Material 2")
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_temp_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_temp_1, color='b', linestyle=':', label=None)
+        plt.fill_between(nonlinear_exp['time'], ex_nl_lb_temp_1, ex_nl_ub_temp_1, color='b', alpha=0.5)
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_temp_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_temp_2, color='r', linestyle=':', label=None)
+        plt.fill_between(nonlinear_exp['time'], ex_nl_lb_temp_2, ex_nl_ub_temp_2, color='r', alpha=0.5)
+        plt.title("Explicit Temperature Plot")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Temperature (eV)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/temperature_exp.png")
+        plt.cla()
+        plt.clf()
+
     # MONTE CARLO PLOTS
     if mc_exists:
         # Standard deviation computing
@@ -245,8 +308,8 @@ def main():
 
     if exists and mc_exists:
         # Intensity
-        plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1 - Realization")
-        plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2 - Realization")
+        plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1 - Realizations")
+        plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2 - Realizations")
         plt.plot(nonlinear['time'], nl_lb_intensity_1, color='b', linestyle=':', label=None)
         plt.plot(nonlinear['time'], nl_ub_intensity_1, color='b', linestyle=':', label=None)
         plt.plot(nonlinear['time'], nl_lb_intensity_2, color='r', linestyle=':', label=None)
@@ -291,6 +354,108 @@ def main():
         plt.legend(loc="best")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/temperature_std_comp.png")
+        plt.cla()
+        plt.clf()
+
+    if ex_exists and mc_exists:
+        # Intensity
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['intensity1'], color='b', label="Material 1 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['intensity2'], color='r', label="Material 2 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_intensity_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_intensity_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_intensity_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_intensity_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='c', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='m', label="Material 2 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_2, color='m', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_2, color='m', linestyle=':', label=None)
+        plt.title("Intensity Plot - Realizations Explicit & Monte Carlo")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/intensity_std_comp_exp.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['temperature1'], color='b', label="Material 1 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['temperature2'], color='r', label="Material 2 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_temp_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_temp_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_temp_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_temp_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='c', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='m', label="Material 2 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_2, color='m', linestyle=':', label=None)
+        plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_2, color='m', linestyle=':', label=None)
+        plt.title("Temperature Plot - Realizations Explicit & Monte Carlo")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Temperature (eV)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/temperature_std_comp_exp.png")
+        plt.cla()
+        plt.clf()
+
+    if exists and ex_exists:
+        # Intensity
+        plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1 - Realizations")
+        plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2 - Realizations")
+        plt.plot(nonlinear['time'], nl_lb_intensity_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], nl_ub_intensity_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], nl_lb_intensity_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], nl_ub_intensity_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['intensity1'], color='c', label="Material 1 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['intensity2'], color='m', label="Material 2 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_intensity_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_intensity_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_intensity_2, color='m', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_intensity_2, color='m', linestyle=':', label=None)
+        plt.title("Intensity Plot - Realizations Implicit & Explicit")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/intensity_imp_exp_std_comp.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear['time'], nonlinear['temperature1'], color='b', label="Material 1 - Realizations")
+        plt.plot(nonlinear['time'], nonlinear['temperature2'], color='r', label="Material 2 - Realizations")
+        plt.plot(nonlinear['time'], nl_lb_temp_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], nl_ub_temp_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], nl_lb_temp_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], nl_ub_temp_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['temperature1'], color='c', label="Material 1 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], nonlinear_exp['temperature2'], color='m', label="Material 2 - Realizations Explicit")
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_temp_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_temp_1, color='c', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_lb_temp_2, color='m', linestyle=':', label=None)
+        plt.plot(nonlinear_exp['time'], ex_nl_ub_temp_2, color='m', linestyle=':', label=None)
+        plt.title("Temperature Plot - Realizations Implicit & Explicit")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Temperature (eV)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/temperature_imp_exp_std_comp.png")
         plt.cla()
         plt.clf()
 

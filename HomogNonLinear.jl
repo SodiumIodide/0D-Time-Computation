@@ -1,11 +1,9 @@
 #!/usr/bin/env julia
 
-include("GeometryGen.jl")
-include("MeshMap.jl")
-include("Constants.jl")
 using LinearAlgebra
 using DataFrames
 using CSV
+include("Constants.jl")
 
 function main()::Nothing
     # Counter
