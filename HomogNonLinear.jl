@@ -114,7 +114,7 @@ function main()::Nothing
         return (10.0^minimum_value, 10.0^maximum_value)
     end
 
-    tabular::DataFrame = DataFrame(time=times, intensity=material_intensity, temperature=material_temp)
+    local tabular::DataFrame = DataFrame(time=times, intensity=material_intensity, temperature=material_temp)
 
     CSV.write("out/nonlinear/data/homog_nonlinear.csv", tabular)
 

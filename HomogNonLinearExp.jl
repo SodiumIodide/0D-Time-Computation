@@ -53,7 +53,7 @@ function main()::Nothing
         material_temp[index] = temp_value  # eV
     end
 
-    tabular::DataFrame = DataFrame(time=times, intensity=material_intensity, temperature=material_temp)
+    local tabular::DataFrame = DataFrame(time=times, intensity=material_intensity, temperature=material_temp)
 
     CSV.write("out/nonlinear/data/homog_nonlinear_exp.csv", tabular)
 

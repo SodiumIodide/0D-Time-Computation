@@ -17,7 +17,7 @@ include("Constants.jl")
 function main()::Nothing
     # Iteration condition
     local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
-        [m; accumulate(Future.randjump, fill(big(10)^20, nthreads()-1), init=m)]
+        [m; accumulate(Future.randjump, fill(big(10)^20, nthreads() - 1), init=m)]
     end
 
     # Computational values

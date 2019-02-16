@@ -9,10 +9,11 @@ import pandas
 
 PLOTPATH = "./out/nonlinear"
 CSVPATH = f"{PLOTPATH}/data"
+HISTPATH = f"{PLOTPATH}/pdf_data"
 
 def main():
     '''Main function'''
-    h_exists, he_exists, exists, ex_exists, l_exists, mc_exists = True, True, True, True, True, True
+    h_exists, he_exists, exists, ex_exists, l_exists, mc_exists, mc_hist = True, True, True, True, True, True, True
     #time,intensity,temperature
     try:
         homog_nonlinear = pandas.read_csv(f"{CSVPATH}/homog_nonlinear.csv")
@@ -43,6 +44,10 @@ def main():
         nonlinear_mc = pandas.read_csv(f"{CSVPATH}/nonlinearmc.csv")
     except FileNotFoundError:
         mc_exists = False
+    try:
+        mc_hist_data = pandas.read_csv(f"{HISTPATH}/mc_pdf.csv")
+    except FileNotFoundError:
+        mc_hist = False
 
     # IMPLICIT PLOTS
     if h_exists:
@@ -620,6 +625,60 @@ def main():
         plt.legend(loc="best")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/temperature_full_comp.png")
+        plt.cla()
+        plt.clf()
+
+    # HISTOGRAM PLOTS
+    if mc_hist:
+        # Intensity Material 1
+        plt.plot(mc_hist_data['intensity1arr'], mc_hist_data['freqintensity1'])
+        plt.title("Intensity 1 Histogram - Monte Carlo")
+        plt.xlabel("Intensity (erg/cm^2-s)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/mc_intensity_1_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Intensity Material 2
+        plt.plot(mc_hist_data['intensity2arr'], mc_hist_data['freqintensity2'])
+        plt.title("Intensity 2 Histogram - Monte Carlo")
+        plt.xlabel("Intensity (erg/cm^2-s)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/mc_intensity_2_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature Material 1
+        plt.plot(mc_hist_data['temperature1arr'], mc_hist_data['freqtemperature1'])
+        plt.title("Temperature 1 Histogram - Monte Carlo")
+        plt.xlabel("Temperature (eV)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/mc_temperature_1_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature Material 2
+        plt.plot(mc_hist_data['temperature2arr'], mc_hist_data['freqtemperature2'])
+        plt.title("Temperature 2 Histogram - Monte Carlo")
+        plt.xlabel("Temperature (eV)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/mc_temperature_2_hist.png")
         plt.cla()
         plt.clf()
 

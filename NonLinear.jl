@@ -156,7 +156,7 @@ function main()::Nothing
     local variance_1_temp::Vector{Float64} = variance.(stat_1_temp)
     local variance_2_temp::Vector{Float64} = variance.(stat_2_temp)
 
-    tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
+    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 
     CSV.write("out/nonlinear/data/nonlinear.csv", tabular)
 
