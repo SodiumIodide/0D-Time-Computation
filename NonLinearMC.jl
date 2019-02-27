@@ -50,22 +50,10 @@ function main()::Nothing
     end
 
     # Parallel arrays
-    local stat_1_intensity::Array{RunningStatistics.RunningStat, 2} = [RunningStatistics.RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
-    local stat_2_intensity::Array{RunningStatistics.RunningStat, 2} = [RunningStatistics.RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
-    local stat_1_temp::Array{RunningStatistics.RunningStat, 2} = [RunningStatistics.RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
-    local stat_2_temp::Array{RunningStatistics.RunningStat, 2} = [RunningStatistics.RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
-
-    # Parallel arrays for histogram production
-    local maximum_intensity_1::Vector{Float64} = zeros(nthreads())
-    local minimum_intensity_1::Vector{Float64} = zeros(nthreads())
-    local maximum_intensity_2::Vector{Float64} = zeros(nthreads())
-    local minimum_intensity_2::Vector{Float64} = zeros(nthreads())
-    local maximum_temp_1::Vector{Float64} = zeros(nthreads())
-    local minimum_temp_1::Vector{Float64} = zeros(nthreads())
-    local maximum_temp_2::Vector{Float64} = zeros(nthreads())
-    local minimum_temp_2::Vector{Float64} = zeros(nthreads())
-    local first_run_m1::Vector{Bool} = fill(true, nthreads())
-    local first_run_m2::Vector{Bool} = fill(true, nthreads())
+    local stat_1_intensity::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
+    local stat_2_intensity::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
+    local stat_1_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
+    local stat_2_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
 
     println(string("Proceeding with ", nthreads(), " computational threads..."))
 
@@ -99,35 +87,11 @@ function main()::Nothing
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
 
                 if (material_num == 1)
-                    RunningStatistics.push(stat_1_intensity[threadid(), index], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_1_temp[threadid(), index], temp_value)  # eV
-                    if (first_run_m1[threadid()])
-                        first_run_m1[threadid()] = false
-                        maximum_intensity_1[threadid()] = intensity_value
-                        minimum_intensity_1[threadid()] = intensity_value
-                        maximum_temp_1[threadid()] = temp_value
-                        minimum_temp_1[threadid()] = temp_value
-                    else
-                        maximum_intensity_1[threadid()] = (intensity_value > maximum_intensity_1[threadid()]) ? intensity_value : maximum_intensity_1[threadid()]
-                        minimum_intensity_1[threadid()] = (intensity_value < minimum_intensity_1[threadid()]) ? intensity_value : minimum_intensity_1[threadid()]
-                        maximum_temp_1[threadid()] = (temp_value > maximum_temp_1[threadid()]) ? temp_value : maximum_temp_1[threadid()]
-                        minimum_temp_1[threadid()] = (temp_value < minimum_temp_1[threadid()]) ? temp_value : minimum_temp_1[threadid()]
-                    end
+                    RunningStatistics.push(stat_1_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
+                    RunningStatistics.push(stat_1_temp[index, threadid()], temp_value)  # eV
                 else
-                    RunningStatistics.push(stat_2_intensity[threadid(), index], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_2_temp[threadid(), index], temp_value)  # eV
-                    if (first_run_m2[threadid()])
-                        first_run_m2[threadid()] = false
-                        maximum_intensity_2[threadid()] = intensity_value
-                        minimum_intensity_2[threadid()] = intensity_value
-                        maximum_temp_2[threadid()] = temp_value
-                        minimum_temp_2[threadid()] = temp_value
-                    else
-                        maximum_intensity_2[threadid()] = (intensity_value > maximum_intensity_2[threadid()]) ? intensity_value : maximum_intensity_2[threadid()]
-                        minimum_intensity_2[threadid()] = (intensity_value < minimum_intensity_2[threadid()]) ? intensity_value : minimum_intensity_2[threadid()]
-                        maximum_temp_2[threadid()] = (temp_value > maximum_temp_2[threadid()]) ? temp_value : maximum_temp_2[threadid()]
-                        minimum_temp_2[threadid()] = (temp_value < minimum_temp_2[threadid()]) ? temp_value : minimum_temp_2[threadid()]
-                    end
+                    RunningStatistics.push(stat_2_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
+                    RunningStatistics.push(stat_2_temp[index, threadid()], temp_value)  # eV
                 end
             else
                 material_num = (material_num == 1) ? 2 : 1
@@ -142,40 +106,28 @@ function main()::Nothing
         end
     end
 
-    local num_1::Vector{Float64} = vec(sum(convert.(Float64, RunningStatistics.num.(stat_1_intensity)), dims=1))
-    local num_2::Vector{Float64} = vec(sum(convert.(Float64, RunningStatistics.num.(stat_2_intensity)), dims=1))
+    local num_1::Vector{Float64} = vec(sum(convert.(Float64, RunningStatistics.num.(stat_1_intensity)), dims=2))
+    local num_2::Vector{Float64} = vec(sum(convert.(Float64, RunningStatistics.num.(stat_2_intensity)), dims=2))
 
-    function compute_mean(mat_r::Array{RunningStatistics.RunningStat, 2}, num_vec::Vector{Float64})::Vector{Float64}
-        return vec(sum(RunningStatistics.mean.(mat_r) .* convert.(Float64, RunningStatistics.num.(mat_r)), dims=1) ./ num_vec')
-    end
+    local material_1_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_1_intensity, num_1)
+    local material_2_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_2_intensity, num_2)
+    local material_1_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_1_temp, num_1)
+    local material_2_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_2_temp, num_2)
 
-    local material_1_intensity::Vector{Float64} = compute_mean(stat_1_intensity, num_1)
-    local material_2_intensity::Vector{Float64} = compute_mean(stat_2_intensity, num_2)
-    local material_1_temp::Vector{Float64} = compute_mean(stat_1_temp, num_1)
-    local material_2_temp::Vector{Float64} = compute_mean(stat_2_temp, num_2)
-
-    function compute_variance(mat_r::Array{RunningStatistics.RunningStat, 2}, num_vec::Vector{Float64}, mean_vec::Vector{Float64})::Vector{Float64}
-        local prefix::Vector{Float64} = vec((num_vec .- 1.0).^(-1))
-        local first_sum::Vector{Float64} = vec(sum((convert.(Float64, RunningStatistics.num.(mat_r)) .- 1.0) .* RunningStatistics.variance.(mat_r), dims=1))
-        local second_sum::Vector{Float64} = vec(sum(convert.(Float64, RunningStatistics.num.(mat_r)) .* (RunningStatistics.mean.(mat_r) .- mean_vec').^2, dims=1))
-
-        return prefix .* (first_sum .+ second_sum)
-    end
-
-    local variance_1_intensity::Vector{Float64} = compute_variance(stat_1_intensity, num_1, material_1_intensity)
-    local variance_2_intensity::Vector{Float64} = compute_variance(stat_2_intensity, num_2, material_2_intensity)
-    local variance_1_temp::Vector{Float64} = compute_variance(stat_1_temp, num_1, material_1_temp)
-    local variance_2_temp::Vector{Float64} = compute_variance(stat_2_temp, num_2, material_2_temp)
+    local variance_1_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_1_intensity, num_1, material_1_intensity)
+    local variance_2_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_2_intensity, num_2, material_2_intensity)
+    local variance_1_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_1_temp, num_1, material_1_temp)
+    local variance_2_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_2_temp, num_2, material_2_temp)
 
     # Save maximum and minimum data
-    local max_intensity_1::Float64 = maximum(maximum_intensity_1)
-    local min_intensity_1::Float64 = minimum(minimum_intensity_1)
-    local max_intensity_2::Float64 = maximum(maximum_intensity_2)
-    local min_intensity_2::Float64 = minimum(minimum_intensity_2)
-    local max_temp_1::Float64 = maximum(maximum_temp_1)
-    local min_temp_1::Float64 = minimum(minimum_temp_1)
-    local max_temp_2::Float64 = maximum(maximum_temp_2)
-    local min_temp_2::Float64 = minimum(minimum_temp_2)
+    local max_intensity_1::Float64 = RunningStatistics.compute_max(stat_1_intensity)
+    local min_intensity_1::Float64 = RunningStatistics.compute_min(stat_1_intensity)
+    local max_intensity_2::Float64 = RunningStatistics.compute_max(stat_2_intensity)
+    local min_intensity_2::Float64 = RunningStatistics.compute_min(stat_2_intensity)
+    local max_temp_1::Float64 = RunningStatistics.compute_max(stat_1_temp)
+    local min_temp_1::Float64 = RunningStatistics.compute_min(stat_1_temp)
+    local max_temp_2::Float64 = RunningStatistics.compute_max(stat_2_temp)
+    local min_temp_2::Float64 = RunningStatistics.compute_min(stat_2_temp)
 
     local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 

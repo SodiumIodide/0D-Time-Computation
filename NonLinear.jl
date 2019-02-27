@@ -1,11 +1,8 @@
 #!/usr/bin/env julia
 
 include("GeometryGen.jl")
-using .GeometryGen
 include("MeshMap.jl")
-using .MeshMap
 include("RunningStatistics.jl")
-using .RunningStatistics
 using Random
 using LinearAlgebra
 using DataFrames
@@ -67,10 +64,10 @@ function main()::Nothing
     end
 
     # Arrays for online computation
-    local stat_1_intensity::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
-    local stat_2_intensity::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
-    local stat_1_temp::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
-    local stat_2_temp::Vector{RunningStat} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:num_t]
+    local stat_1_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_2_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_1_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_2_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
 
     # Outer loop
     while (cont_calc_outer)
@@ -128,11 +125,11 @@ function main()::Nothing
 
         for k in 1:num_t
             if (material_intensity_array[k, 1] != 0.0)
-                push(stat_1_intensity[k], material_intensity_array[k, 1])  # erg/cm^2-s
-                push(stat_1_temp[k], material_temp_array[k, 1])  # eV
+                RunningStatistics.push(stat_1_intensity[k], material_intensity_array[k, 1])  # erg/cm^2-s
+                RunningStatistics.push(stat_1_temp[k], material_temp_array[k, 1])  # eV
             else
-                push(stat_2_intensity[k], material_intensity_array[k, 2])  # erg/cm^2-s
-                push(stat_2_temp[k], material_temp_array[k, 2])  # eV
+                RunningStatistics.push(stat_2_intensity[k], material_intensity_array[k, 2])  # erg/cm^2-s
+                RunningStatistics.push(stat_2_temp[k], material_temp_array[k, 2])  # eV
             end
         end
 
@@ -147,14 +144,14 @@ function main()::Nothing
         end
     end
 
-    local material_1_intensity::Vector{Float64} = mean.(stat_1_intensity)
-    local material_2_intensity::Vector{Float64} = mean.(stat_2_intensity)
-    local material_1_temp::Vector{Float64} = mean.(stat_1_temp)
-    local material_2_temp::Vector{Float64} = mean.(stat_2_temp)
-    local variance_1_intensity::Vector{Float64} = variance.(stat_1_intensity)
-    local variance_2_intensity::Vector{Float64} = variance.(stat_2_intensity)
-    local variance_1_temp::Vector{Float64} = variance.(stat_1_temp)
-    local variance_2_temp::Vector{Float64} = variance.(stat_2_temp)
+    local material_1_intensity::Vector{Float64} = RunningStatistics.mean.(stat_1_intensity)
+    local material_2_intensity::Vector{Float64} = RunningStatistics.mean.(stat_2_intensity)
+    local material_1_temp::Vector{Float64} = RunningStatistics.mean.(stat_1_temp)
+    local material_2_temp::Vector{Float64} = RunningStatistics.mean.(stat_2_temp)
+    local variance_1_intensity::Vector{Float64} = RunningStatistics.variance.(stat_1_intensity)
+    local variance_2_intensity::Vector{Float64} = RunningStatistics.variance.(stat_2_intensity)
+    local variance_1_temp::Vector{Float64} = RunningStatistics.variance.(stat_1_temp)
+    local variance_2_temp::Vector{Float64} = RunningStatistics.variance.(stat_2_temp)
 
     local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
 
