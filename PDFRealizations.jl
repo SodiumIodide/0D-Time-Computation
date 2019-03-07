@@ -1,11 +1,14 @@
 #!/usr/bin/env julia
 
 include("ExponentialHist.jl")
+include("GeometryGen.jl")
+include("MeshMap.jl")
 using Random
+using Future
+using LinearAlgebra
 using DataFrames
 using CSV
 using Base.Threads
-using Future
 include("Constants.jl")
 
 function main()::Nothing
@@ -67,7 +70,7 @@ function main()::Nothing
         local last_index::Int64 = num_t
         local steady_state_search::Bool = true
 
-        # Naive pass through data - three same points in a row = steady state
+        # Naive pass through data - three same points in a row = steady_state
         while (steady_state_search)
             index += 1
             (point, last_point, sec_last_point) = (data[index], point, last_point)
@@ -91,7 +94,7 @@ function main()::Nothing
 
     println("Steady state index found to occur at point ", steady_state_index)
 
-    # BEGIN MONTE CARLO SECOND PASS
+    # BEGIN REALIZATIONS SECOND PASS
 
     # Iteration condition
     local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
@@ -101,15 +104,6 @@ function main()::Nothing
     # Computational values
     local times::Vector{Float64} = [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
-    # Probability for material sampling
-    local prob_1::Float64 = chord_1 / (chord_1 + chord_2)
-    local change_prob_1::Float64 = 1.0 / chord_1 * delta_t
-    local change_prob_2::Float64 = 1.0 / chord_2 * delta_t
-    if ((change_prob_1 > 1.0) || (change_prob_2 > 1.0))
-        println("The value for delta_t is too large for sampling")
-        return nothing
-    end
-
     function sigma_a(opacity_term::Float64, temp::Float64)::Float64
         return opacity_term / temp^3
     end
@@ -118,19 +112,41 @@ function main()::Nothing
         return spec_heat_term
     end
 
-    function balance_intensity(opacity::Float64, past_intensity::Float64, past_temp::Float64)::Float64
-        local term_1::Float64 = new_delta_t * sol^2 * opacity * arad * past_temp^4
-        local term_2::Float64 = (1.0 - new_delta_t * sol * opacity) * past_intensity
+    function balance_a(intensity::Float64, temp::Float64, delta_t::Float64, opacity::Float64, past_intensity::Float64)::Float64
+        local term_1::Float64 = intensity
+        local term_2::Float64 = - delta_t * sol^2 * opacity * arad * temp^4
+        local term_3::Float64 = delta_t * sol * opacity * intensity
+        local term_4::Float64 = - past_intensity
 
-        return term_1 + term_2
+        return term_1 + term_2 + term_3 + term_4
     end
 
-    function balance_temp(opacity::Float64, spec_heat::Float64, density::Float64, past_intensity::Float64, past_temp::Float64)::Float64
-        local term_1::Float64 = new_delta_t / (density * spec_heat) * opacity * past_intensity
-        local term_2::Float64 = - new_delta_t / (density * spec_heat) * sol * opacity * arad * past_temp^4
-        local term_3::Float64 = past_temp
+    function balance_b(intensity::Float64, temp::Float64, delta_t::Float64, opacity::Float64, spec_heat::Float64, density::Float64, past_temp::Float64)::Float64
+        local term_1::Float64 = temp
+        local term_2::Float64 = - delta_t / (density * spec_heat) * opacity * intensity
+        local term_3::Float64 = delta_t / (density * spec_heat) * sol * opacity * arad * temp^4
+        local term_4::Float64 = - past_temp
 
-        return term_1 + term_2 + term_3
+        return term_1 + term_2 + term_3 + term_4
+    end
+
+    function make_jacobian(intensity::Float64, temp::Float64, delta_t::Float64, opacity_term::Float64, density::Float64, spec_heat_term::Float64)::Array{Float64, 2}
+        local term_1::Float64 = 1.0 + delta_t * sol * opacity_term / temp^3
+        local term_2::Float64 = - delta_t * sol^2 * opacity_term * arad - 3.0 * delta_t * sol * opacity_term / temp^4 * intensity
+        local term_3::Float64 = - delta_t / (density * spec_heat_term) * opacity_term / temp^3
+        local term_4::Float64 = 1.0 + 3.0 * delta_t * opacity_term / (density * spec_heat_term * temp^4) * intensity + delta_t / (density * spec_heat_term) * sol * opacity_term * arad
+
+        return [
+            term_1 term_2;
+            term_3 term_4
+        ]
+    end
+
+    function relative_change(delta::Vector{Float64}, original_terms::Vector{Float64})::Float64
+        local current_norm::Float64 = sqrt(sum([x^2 for x in delta]))
+        local original_norm::Float64 = sqrt(sum([x^2 for x in original_terms]))
+
+        return current_norm / original_norm
     end
 
     println("Proceeding with ", nthreads(), " computational threads...")
@@ -139,43 +155,71 @@ function main()::Nothing
 
     # Outer loop
     @threads for i = 1:max_iterations_hist
-        local rand_num::Float64
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, steady_state_time, num_divs_hist, rng=gen_array[threadid()])
+
+        local intensity::Vector{Float64} = zeros(num_cells)
+        local temp::Vector{Float64} = zeros(num_cells)
 
         # First loop uses initial conditions
         local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
 
-        # Sample initial starting material
-        rand_num = rand(gen_array[threadid()], Float64)
-        local material_num::Int32 = (rand_num < prob_1) ? 1 : 2
+        # Inner loop
+        for (index, material) in enumerate(materials)
+            local delta_t_unstruct::Float64 = t_delta[index]
+            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = (material == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
 
-        # Innter loop
-        for (index, time) in enumerate(times)
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
+            local original_terms::Vector{Float64} = [
+                intensity_value,
+                temp_value
+            ]
+            local old_terms::Vector{Float64} = deepcopy(original_terms)
+            local new_terms::Vector{Float64} = deepcopy(original_terms)
 
-            # Sample whether material changes
-            rand_num = rand(gen_array[threadid()], Float64)
+            local error::Float64 = 1.0
 
-            if (rand_num > change_prob)
-                local opacity::Float64 = sigma_a(opacity_term, temp_value)
-                local spec_heat::Float64 = c_v(spec_heat_term, temp_value)
+            # Newtonian loop
+            while (error >= tolerance)
+                local opacity::Float64 = sigma_a(opacity_term, old_terms[2])
+                local spec_heat::Float64 = c_v(spec_heat_term, old_terms[2])
 
-                local new_intensity_value::Float64 = balance_intensity(opacity, intensity_value, temp_value)
-                local new_temp_value::Float64 = balance_temp(opacity, spec_heat, dens, intensity_value, temp_value)
+                local jacobian::Array{Float64, 2} = make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
+                local func_vector::Vector{Float64} = [
+                    balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
+                ]
 
-                (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
+                local delta::Vector{Float64} = jacobian \ - func_vector
 
-                local (intensity_bin_no::Int64, temp_bin_no::Int64)
+                new_terms = delta + old_terms
+                old_terms = new_terms
 
-                if (material_num == 1)
-                    ExponentialHist.push(intensity_1_bin[threadid()], intensity_value)
-                    ExponentialHist.push(temperature_1_bin[threadid()], temp_value)
-                else
-                    ExponentialHist.push(intensity_2_bin[threadid()], intensity_value)
-                    ExponentialHist.push(temperature_2_bin[threadid()], temp_value)
-                end
-            else
-                material_num = (material_num == 1) ? 2 : 1
+                error = relative_change(delta, original_terms)
             end
+            intensity_value = new_terms[1]  # erg/cm^2-s
+            temp_value = new_terms[2]  # eV
+            #intensity[index] = intensity_value  # erg/cm^2-s
+            #temp[index] = temp_value  # eV
+
+            if (material == 1)
+                ExponentialHist.push(intensity_1_bin[threadid()], intensity_value)
+                ExponentialHist.push(temperature_1_bin[threadid()], temp_value)
+            else
+                ExponentialHist.push(intensity_2_bin[threadid()], intensity_value)
+                ExponentialHist.push(temperature_2_bin[threadid()], temp_value)
+            end
+        end
+
+        #local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, new_delta_t, num_t_hist, convert(Int32, 2))
+        #local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, new_delta_t, num_t_hist, convert(Int32, 2))
+
+        #for k in 1:num_t_hist
+        #    if (material_intensity_array[k, 1] != 0.0)
+        #        ExponentialHist.push(intensity_1_bin[threadid()], material_intensity_array[k, 1])
+        #        ExponentialHist.push(temperature_1_bin[threadid()], material_temp_array[k, 1])
+        #    else
+        #        ExponentialHist.push(intensity_2_bin[threadid()], material_intensity_array[k, 2])
+        #        ExponentialHist.push(temperature_2_bin[threadid()], material_temp_array[k, 2])
+        #    end
         end
 
         # Need to reference Core namespace for thread-safe printing
@@ -215,7 +259,7 @@ function main()::Nothing
 
     local tabular::DataFrame = DataFrame(intensity1arr=material_1_intensity_array, freqintensity1=material_1_intensity_bin, intensity2arr=material_2_intensity_array, freqintensity2=material_2_intensity_bin, temperature1arr=material_1_temperature_array, freqtemperature1=material_1_temperature_bin, temperature2arr=material_2_temperature_array, freqtemperature2=material_2_temperature_bin, opacity1arr=xs_1_array, opacity2arr=xs_2_array)
 
-    CSV.write("out/nonlinear/pdf_data/mc_pdf.csv", tabular)
+    CSV.write("out/nonlinear/pdf_data/realizations_pdf.csv", tabular)
 
     return nothing
 end

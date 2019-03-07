@@ -55,7 +55,7 @@ function main()::Nothing
     local stat_1_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
     local stat_2_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
 
-    println(string("Proceeding with ", nthreads(), " computational threads..."))
+    println("Proceeding with ", nthreads(), " computational threads...")
 
     local printlock::SpinLock = SpinLock()
 
@@ -101,7 +101,7 @@ function main()::Nothing
         # Need to reference Core namespace for thread-safe printing
         if (i % num_say == 0)
             lock(printlock) do
-                Core.println(string("Iteration Number ", i))
+                Core.println("Iteration Number ", i)
             end
         end
     end

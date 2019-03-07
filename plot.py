@@ -13,7 +13,7 @@ HISTPATH = f"{PLOTPATH}/pdf_data"
 
 def main():
     '''Main function'''
-    h_exists, he_exists, exists, ex_exists, l_exists, mc_exists, mc_hist = True, True, True, True, True, True, True
+    h_exists, he_exists, exists, ex_exists, l_exists, mc_exists, mc_hist, re_hist = True, True, True, True, True, True, True, True
     #time,intensity,temperature
     try:
         homog_nonlinear = pandas.read_csv(f"{CSVPATH}/homog_nonlinear.csv")
@@ -44,10 +44,16 @@ def main():
         nonlinear_mc = pandas.read_csv(f"{CSVPATH}/nonlinearmc.csv")
     except FileNotFoundError:
         mc_exists = False
+    #intensity1arr,freqintensity1,intensity2arr,freqintensity2,temperature1arr,freqtemperature1,temperature2arr,freqtemperature2,opacity1arr,opacity2arr
     try:
         mc_hist_data = pandas.read_csv(f"{HISTPATH}/mc_pdf.csv")
     except FileNotFoundError:
         mc_hist = False
+    #intensity1arr,freqintensity1,intensity2arr,freqintensity2,temperature1arr,freqtemperature1,temperature2arr,freqtemperature2,opacity1arr,opacity2arr
+    try:
+        re_hist_data = pandas.read_csv(f"{HISTPATH}/realizations_pdf.csv")
+    except FileNotFoundError:
+        re_hist = False
 
     # IMPLICIT PLOTS
     if h_exists:
@@ -679,6 +685,107 @@ def main():
         plt.grid(b=True, which="both", axis="both")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/mc_temperature_2_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Opacity Material 1
+        plt.plot(mc_hist_data['opacity1arr'], mc_hist_data['freqtemperature1'])
+        plt.title("Opacity 1 Histogram - Monte Carlo")
+        plt.xlabel("Opacity (cm^-1)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/mc_opacity_1_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Opacity Material 2
+        plt.plot(mc_hist_data['opacity2arr'], mc_hist_data['freqtemperature2'])
+        plt.title("Opacity 2 Histogram - Monte Carlo")
+        plt.xlabel("Opacity (cm^-1)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/mc_opacity_2_hist.png")
+        plt.cla()
+        plt.clf()
+
+    if re_hist:
+        # Intensity Material 1
+        plt.plot(re_hist_data['intensity1arr'], re_hist_data['freqintensity1'])
+        plt.title("Intensity 1 Histogram - Realizations")
+        plt.xlabel("Intensity (erg/cm^2-s)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realizations_intensity_1_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Intensity Material 2
+        plt.plot(re_hist_data['intensity2arr'], re_hist_data['freqintensity2'])
+        plt.title("Intensity 2 Histogram - Realizations")
+        plt.xlabel("Intensity (erg/cm^2-s)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realizations_intensity_2_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature Material 1
+        plt.plot(re_hist_data['temperature1arr'], re_hist_data['freqtemperature1'])
+        plt.title("Temperature 1 Histogram - Realizations")
+        plt.xlabel("Temperature (eV)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realizations_temperature_1_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature Material 2
+        plt.plot(re_hist_data['temperature2arr'], re_hist_data['freqtemperature2'])
+        plt.title("Temperature 2 Histogram - Realizations")
+        plt.xlabel("Temperature (eV)")
+        plt.ylabel("Frequency")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realizations_temperature_2_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Opacity Material 1
+        plt.plot(re_hist_data['opacity1arr'], re_hist_data['freqtemperature1'])
+        plt.title("Opacity 1 Histogram - Realizations")
+        plt.xlabel("Opacity (cm^-1)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realizations_opacity_1_hist.png")
+        plt.cla()
+        plt.clf()
+
+        # Opacity Material 2
+        plt.plot(re_hist_data['opacity2arr'], re_hist_data['freqtemperature2'])
+        plt.title("Opacity 2 Histogram - Realizations")
+        plt.xlabel("Opacity (cm^-1)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/realizations_opacity_2_hist.png")
         plt.cla()
         plt.clf()
 

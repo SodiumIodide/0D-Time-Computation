@@ -12,6 +12,7 @@ module RunningStatistics
         m_min::Float64
         m_max::Float64
 
+        # Internal constructor
         RunningStat() = new(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     end
 
