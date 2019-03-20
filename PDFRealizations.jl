@@ -220,7 +220,7 @@ function main()::Nothing
         #        ExponentialHist.push(intensity_2_bin[threadid()], material_intensity_array[k, 2])
         #        ExponentialHist.push(temperature_2_bin[threadid()], material_temp_array[k, 2])
         #    end
-        end
+        #end
 
         # Need to reference Core namespace for thread-safe printing
         if (i % num_say == 0)

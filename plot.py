@@ -24,12 +24,12 @@ def main():
         homog_nonlinear_exp = pandas.read_csv(f"{CSVPATH}/homog_nonlinear_exp.csv")
     except FileNotFoundError:
         he_exists = False
-    #time,intensity1,varintensity1,temperature1,vartemperature1,intensity2,varintensity2,temperature2,vartemperature2
+    #time,intensity1,varintensity1,maxintensity1,minintensity1,temperature1,vartemperature1,maxtemperature1,mintemperature1,intensity2,varintensity2,maxintensity2,minintensity2,temperature2,vartemperature2,maxtemperature2,mintemperature2
     try:
         nonlinear = pandas.read_csv(f"{CSVPATH}/nonlinear.csv")
     except FileNotFoundError:
         exists = False
-    #time,intensity1,varintensity1,temperature1,vartemperature1,intensity2,varintensity2,temperature2,vartemperature2
+    #time,intensity1,varintensity1,maxintensity1,minintensity1,temperature1,vartemperature1,maxtemperature1,mintemperature1,intensity2,varintensity2,maxintensity2,minintensity2,temperature2,vartemperature2,maxtemperature2,mintemperature2
     try:
         nonlinear_exp = pandas.read_csv(f"{CSVPATH}/nonlinear_exp.csv")
     except FileNotFoundError:
@@ -39,7 +39,7 @@ def main():
         linear = pandas.read_csv(f"{CSVPATH}/linear.csv")
     except FileNotFoundError:
         l_exists = False
-    #time,intensity1,varintensity1,temperature1,vartemperature1,intensity2,varintensity2,temperature2,vartemperature2
+    #time,intensity1,varintensity1,maxintensity1,minintensity1,temperature1,vartemperature1,maxtemperature1,mintemperature1,intensity2,varintensity2,maxintensity2,minintensity2,temperature2,vartemperature2,maxtemperature2,mintemperature2
     try:
         nonlinear_mc = pandas.read_csv(f"{CSVPATH}/nonlinearmc.csv")
     except FileNotFoundError:

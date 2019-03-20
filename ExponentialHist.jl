@@ -20,8 +20,8 @@ module ExponentialHist
         local number::Int64 = convert(Int64, floor((value + delta / 2.0 - d_minimum) / delta)) + 1
 
         # Fit into pre-determined number of gins: excess in either direction is assumed to be maximum or minimum
-        number = (number < 1) ? 1 : number
-        number = (number > num_bins + 1) ? num_bins + 1 : number
+        number = (number < 1) ? 0 : number
+        number = (number > num_bins + 1) ? 0 : number
 
         return number
     end
@@ -30,7 +30,9 @@ module ExponentialHist
         local point::Float64 = log10(x)
         local data_bin_no::Int64 = bin_no(point, exh.m_delta, exh.m_min, exh.m_length)
 
-        exh.m_bin[data_bin_no] += 1.0
+        if (data_bin_no != 0)
+            exh.m_bin[data_bin_no] += 1.0
+        end
 
         return nothing
     end

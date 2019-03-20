@@ -1,11 +1,8 @@
 #!/usr/bin/env julia
 
 include("GeometryGen.jl")
-using .GeometryGen
 include("MeshMap.jl")
-using .MeshMap
 include("RunningStatistics.jl")
-using .RunningStatistics
 using Random
 using Future
 using LinearAlgebra
@@ -47,10 +44,10 @@ function main()::Nothing
     end
 
     # Parallel arrays
-    local stat_1_intensity::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
-    local stat_2_intensity::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
-    local stat_1_temp::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
-    local stat_2_temp::Array{RunningStat, 2} = [RunningStat(0, 0.0, 0.0, 0.0, 0.0) for i in 1:nthreads(), j in 1:num_t]
+    local stat_1_intensity::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
+    local stat_2_intensity::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
+    local stat_1_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
+    local stat_2_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
 
     println(string("Proceeding with ", nthreads(), " computational threads..."))
 
@@ -59,7 +56,7 @@ function main()::Nothing
     # Outer loop
     @threads for i = 1:max_iterations
         # Prevent random number clashing with discrete generators
-        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=gen_array[threadid()])
 
         local intensity::Vector{Float64} = zeros(num_cells)
         local temp::Vector{Float64} = zeros(num_cells)
@@ -84,16 +81,16 @@ function main()::Nothing
             temp[index] = temp_value  # eV
         end
 
-        local material_intensity_array::Array{Float64, 2} = material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
-        local material_temp_array::Array{Float64, 2} = material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
+        local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
+        local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
 
         for k in 1:num_t
             if (material_intensity_array[k, 1] != 0.0)
-                push(stat_1_intensity[threadid(), k], material_intensity_array[k, 1])  # erg/cm^2-s
-                push(stat_1_temp[threadid(), k], material_temp_array[k, 1])  # eV
+                RunningStatistics.push(stat_1_intensity[k, threadid()], material_intensity_array[k, 1])  # erg/cm^2-s
+                RunningStatistics.push(stat_1_temp[k, threadid()], material_temp_array[k, 1])  # eV
             else
-                push(stat_2_intensity[threadid(), k], material_intensity_array[k, 2])  # erg/cm^2-s
-                push(stat_2_temp[threadid(), k], material_temp_array[k, 2])  # eV
+                RunningStatistics.push(stat_2_intensity[k, threadid()], material_intensity_array[k, 2])  # erg/cm^2-s
+                RunningStatistics.push(stat_2_temp[k, threadid()], material_temp_array[k, 2])  # eV
             end
         end
 
@@ -105,32 +102,33 @@ function main()::Nothing
         end
     end
 
-    local num_1::Vector{Float64} = vec(sum(convert.(Float64, num.(stat_1_intensity)), dims=1))
-    local num_2::Vector{Float64} = vec(sum(convert.(Float64, num.(stat_2_intensity)), dims=1))
+    # Total tallies for each quantity
+    local num_1::Vector{Float64} = RunningStatistics.total(stat_1_intensity)
+    local num_2::Vector{Float64} = RunningStatistics.total(stat_2_intensity)
 
-    function compute_mean(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64})::Vector{Float64}
-        return vec(sum(mean.(mat_r) .* convert.(Float64, num.(mat_r)), dims=1) ./ num_vec')
-    end
+    # Mean values
+    local material_1_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_1_intensity, num_1)
+    local material_2_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_2_intensity, num_2)
+    local material_1_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_1_temp, num_1)
+    local material_2_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_2_temp, num_2)
 
-    local material_1_intensity::Vector{Float64} = compute_mean(stat_1_intensity, num_1)
-    local material_2_intensity::Vector{Float64} = compute_mean(stat_2_intensity, num_2)
-    local material_1_temp::Vector{Float64} = compute_mean(stat_1_temp, num_1)
-    local material_2_temp::Vector{Float64} = compute_mean(stat_2_temp, num_2)
+    # Variance values
+    local variance_1_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_1_intensity, num_1, material_1_intensity)
+    local variance_2_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_2_intensity, num_2, material_2_intensity)
+    local variance_1_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_1_temp, num_1, material_1_temp)
+    local variance_2_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_2_temp, num_2, material_2_temp)
 
-    function compute_variance(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64}, mean_vec::Vector{Float64})::Vector{Float64}
-        local prefix::Vector{Float64} = vec((num_vec .- 1.0).^(-1))
-        local first_sum::Vector{Float64} = vec(sum((convert.(Float64, num.(mat_r)) .- 1.0) .* variance.(mat_r), dims=1))
-        local second_sum::Vector{Float64} = vec(sum(convert.(Float64, num.(mat_r)) .* (mean.(mat_r) .- mean_vec').^2, dims=1))
+    # Maximum and minimum values
+    local max_intensity_1::Vector{Float64} = RunningStatistics.compute_max(stat_1_intensity)
+    local min_intensity_1::Vector{Float64} = RunningStatistics.compute_min(stat_1_intensity)
+    local max_intensity_2::Vector{Float64} = RunningStatistics.compute_max(stat_2_intensity)
+    local min_intensity_2::Vector{Float64} = RunningStatistics.compute_min(stat_2_intensity)
+    local max_temp_1::Vector{Float64} = RunningStatistics.compute_max(stat_1_temp)
+    local min_temp_1::Vector{Float64} = RunningStatistics.compute_min(stat_1_temp)
+    local max_temp_2::Vector{Float64} = RunningStatistics.compute_max(stat_2_temp)
+    local min_temp_2::Vector{Float64} = RunningStatistics.compute_min(stat_2_temp)
 
-        return prefix .* (first_sum .+ second_sum)
-    end
-
-    local variance_1_intensity::Vector{Float64} = compute_variance(stat_1_intensity, num_1, material_1_intensity)
-    local variance_2_intensity::Vector{Float64} = compute_variance(stat_2_intensity, num_2, material_2_intensity)
-    local variance_1_temp::Vector{Float64} = compute_variance(stat_1_temp, num_1, material_1_temp)
-    local variance_2_temp::Vector{Float64} = compute_variance(stat_2_temp, num_2, material_2_temp)
-
-    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
+    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2)
 
     CSV.write("out/nonlinear/data/nonlinear_exp.csv", tabular)
 

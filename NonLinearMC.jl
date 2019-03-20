@@ -106,35 +106,35 @@ function main()::Nothing
         end
     end
 
-    local num_1::Vector{Float64} = vec(sum(convert.(Float64, RunningStatistics.num.(stat_1_intensity)), dims=2))
-    local num_2::Vector{Float64} = vec(sum(convert.(Float64, RunningStatistics.num.(stat_2_intensity)), dims=2))
+    # Total tallies for each quantity
+    local num_1::Vector{Float64} = RunningStatistics.total(stat_1_intensity)
+    local num_2::Vector{Float64} = RunningStatistics.total(stat_2_intensity)
 
+    # Mean values
     local material_1_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_1_intensity, num_1)
     local material_2_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_2_intensity, num_2)
     local material_1_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_1_temp, num_1)
     local material_2_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_2_temp, num_2)
 
+    # Variance values
     local variance_1_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_1_intensity, num_1, material_1_intensity)
     local variance_2_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_2_intensity, num_2, material_2_intensity)
     local variance_1_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_1_temp, num_1, material_1_temp)
     local variance_2_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_2_temp, num_2, material_2_temp)
 
-    # Save maximum and minimum data
-    local max_intensity_1::Float64 = RunningStatistics.compute_max(stat_1_intensity)
-    local min_intensity_1::Float64 = RunningStatistics.compute_min(stat_1_intensity)
-    local max_intensity_2::Float64 = RunningStatistics.compute_max(stat_2_intensity)
-    local min_intensity_2::Float64 = RunningStatistics.compute_min(stat_2_intensity)
-    local max_temp_1::Float64 = RunningStatistics.compute_max(stat_1_temp)
-    local min_temp_1::Float64 = RunningStatistics.compute_min(stat_1_temp)
-    local max_temp_2::Float64 = RunningStatistics.compute_max(stat_2_temp)
-    local min_temp_2::Float64 = RunningStatistics.compute_min(stat_2_temp)
+    # Maximum and minimum values
+    local max_intensity_1::Vector{Float64} = RunningStatistics.compute_max(stat_1_intensity)
+    local min_intensity_1::Vector{Float64} = RunningStatistics.compute_min(stat_1_intensity)
+    local max_intensity_2::Vector{Float64} = RunningStatistics.compute_max(stat_2_intensity)
+    local min_intensity_2::Vector{Float64} = RunningStatistics.compute_min(stat_2_intensity)
+    local max_temp_1::Vector{Float64} = RunningStatistics.compute_max(stat_1_temp)
+    local min_temp_1::Vector{Float64} = RunningStatistics.compute_min(stat_1_temp)
+    local max_temp_2::Vector{Float64} = RunningStatistics.compute_max(stat_2_temp)
+    local min_temp_2::Vector{Float64} = RunningStatistics.compute_min(stat_2_temp)
 
-    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, temperature1=material_1_temp, vartemperature1=variance_1_temp, intensity2=material_2_intensity, varintensity2=variance_2_intensity, temperature2=material_2_temp, vartemperature2=variance_2_temp)
-
-    local minmax::DataFrame = DataFrame(maxint1=max_intensity_1, minint1=min_intensity_1, maxtemp1=max_temp_1, mintemp1=min_temp_1, maxint2=max_intensity_2, minint2=min_intensity_2, maxtemp2=max_temp_2, mintemp2=min_temp_2)
+    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2)
 
     CSV.write("out/nonlinear/data/nonlinearmc.csv", tabular)
-    CSV.write("out/nonlinear/pdf_data/minmax.csv", minmax)
 
     return nothing
 end

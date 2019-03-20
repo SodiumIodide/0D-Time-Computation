@@ -79,6 +79,10 @@ module RunningStatistics
         return [RunningStatistics.RunningStat() for i in 1:length, j in 1:nthreads()]
     end
 
+    function total(mat_r::Array{RunningStat, 2})::Vector{Float64}
+        return vec(sum((@. convert(Float64, num(mat_r))), dims=2))
+    end
+
     function compute_mean(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64})::Vector{Float64}
         return vec(sum((@. mean(mat_r) * convert(Float64, num(mat_r))), dims=2) ./ num_vec)
     end
@@ -91,11 +95,11 @@ module RunningStatistics
         return @. prefix * (first_sum + second_sum)
     end
 
-    function compute_min(mat_r::Array{RunningStat, 2})::Float64
-        return minimum(@. least(mat_r))
+    function compute_min(mat_r::Array{RunningStat, 2})::Vector{Float64}
+        return vec(minimum((@. least(mat_r)), dims=2))
     end
 
-    function compute_max(mat_r::Array{RunningStat, 2})::Float64
-        return maximum(@. greatest(mat_r))
+    function compute_max(mat_r::Array{RunningStat, 2})::Vector{Float64}
+        return vec(maximum((@. greatest(mat_r)), dims=2))
     end
 end

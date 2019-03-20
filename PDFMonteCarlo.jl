@@ -72,7 +72,7 @@ function main()::Nothing
             index += 1
             (point, last_point, sec_last_point) = (data[index], point, last_point)
             if ((point == last_point) && (last_point == sec_last_point))
-                last_index = index
+                last_index = index - 3
                 steady_state_search = false
             end
         end
