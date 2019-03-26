@@ -140,7 +140,7 @@ function main()::Nothing
         # Need to reference Core namespace for thread-safe printing
         if (i % num_say == 0)
             lock(printlock) do
-                Core.println("Iteration Number ", i)
+                Core.println("Realization Number ", i)
             end
         end
     end

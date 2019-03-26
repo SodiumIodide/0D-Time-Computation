@@ -1,20 +1,19 @@
 #!/usr/bin/env julia
 
 include("RunningStatistics.jl")
+include("PhysicsFunctions.jl")
 using Random
 using DataFrames
 using CSV
-using Base.Threads
-using Future
 include("Constants.jl")
 
 function main()::Nothing
     # Iteration condition
-    local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
-        [m; accumulate(Future.randjump, fill(big(10)^20, nthreads() - 1), init=m)]
-    end
+    local cont_calc_outer::Bool = true
+    local generator::MersenneTwister = MersenneTwister(1234)
 
     # Computational values
+    local iteration_number::Int64 = 0
     local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
 
     # Probability for material sampling
@@ -26,48 +25,21 @@ function main()::Nothing
         return nothing
     end
 
-    function sigma_a(opacity_term::Float64, temp::Float64)::Float64
-        return opacity_term / temp^3
-    end
-
-    function c_v(spec_heat_term::Float64, temp::Float64)::Float64
-        return spec_heat_term
-    end
-
-    function balance_intensity(opacity::Float64, past_intensity::Float64, past_temp::Float64)::Float64
-        local term_1::Float64 = delta_t * sol^2 * opacity * arad * past_temp^4
-        local term_2::Float64 = (1.0 - delta_t * sol * opacity) * past_intensity
-
-        return term_1 + term_2
-    end
-
-    function balance_temp(opacity::Float64, spec_heat::Float64, density::Float64, past_intensity::Float64, past_temp::Float64)::Float64
-        local term_1::Float64 = delta_t / (density * spec_heat) * opacity * past_intensity
-        local term_2::Float64 = - delta_t / (density * spec_heat) * sol * opacity * arad * past_temp^4
-        local term_3::Float64 = past_temp
-
-        return term_1 + term_2 + term_3
-    end
-
     # Parallel arrays
-    local stat_1_intensity::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
-    local stat_2_intensity::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
-    local stat_1_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
-    local stat_2_temp::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
-
-    println("Proceeding with ", nthreads(), " computational threads...")
-
-    local printlock::SpinLock = SpinLock()
+    local stat_1_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_2_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_1_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_2_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
 
     # Outer loop
-    @threads for i = 1:max_iterations
+    while (cont_calc_outer)
         local rand_num::Float64
 
         # First loop uses initial conditions
         local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
 
         # Sample initial starting material
-        rand_num = rand(gen_array[threadid()], Float64)
+        rand_num = rand(generator, Float64)
         local material_num::Int32 = (rand_num < prob_1) ? 1 : 2
 
         # Inner loop
@@ -75,62 +47,61 @@ function main()::Nothing
             local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
 
             # Sample whether material changes
-            rand_num = rand(gen_array[threadid()], Float64)
+            rand_num = rand(generator, Float64)
 
             if (rand_num > change_prob)
-                local opacity::Float64 = sigma_a(opacity_term, temp_value)
-                local spec_heat::Float64 = c_v(spec_heat_term, temp_value)
+                local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, temp_value)
+                local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, temp_value)
 
-                local new_intensity_value::Float64 = balance_intensity(opacity, intensity_value, temp_value)
-                local new_temp_value::Float64 = balance_temp(opacity, spec_heat, dens, intensity_value, temp_value)
+                local new_intensity_value::Float64 = PhysicsFunctions.balance_intensity(opacity, delta_t, intensity_value, temp_value)
+                local new_temp_value::Float64 = PhysicsFunctions.balance_temp(opacity, spec_heat, dens, delta_t, intensity_value, temp_value)
 
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
 
                 if (material_num == 1)
-                    RunningStatistics.push(stat_1_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_1_temp[index, threadid()], temp_value)  # eV
+                    RunningStatistics.push(stat_1_intensity[index], intensity_value)  # erg/cm^2-s
+                    RunningStatistics.push(stat_1_temp[index], temp_value)  # eV
                 else
-                    RunningStatistics.push(stat_2_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_2_temp[index, threadid()], temp_value)  # eV
+                    RunningStatistics.push(stat_2_intensity[index], intensity_value)  # erg/cm^2-s
+                    RunningStatistics.push(stat_2_temp[index], temp_value)  # eV
                 end
             else
                 material_num = (material_num == 1) ? 2 : 1
             end
         end
 
-        # Need to reference Core namespace for thread-safe printing
-        if (i % num_say == 0)
-            lock(printlock) do
-                Core.println("Iteration Number ", i)
-            end
+        iteration_number += 1
+
+        if (iteration_number % num_say == 0)
+            println("History Number ", iteration_number)
+        end
+
+        if (iteration_number > max_iterations)
+            cont_calc_outer = false
         end
     end
 
-    # Total tallies for each quantity
-    local num_1::Vector{Float64} = RunningStatistics.total(stat_1_intensity)
-    local num_2::Vector{Float64} = RunningStatistics.total(stat_2_intensity)
-
     # Mean values
-    local material_1_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_1_intensity, num_1)
-    local material_2_intensity::Vector{Float64} = RunningStatistics.compute_mean(stat_2_intensity, num_2)
-    local material_1_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_1_temp, num_1)
-    local material_2_temp::Vector{Float64} = RunningStatistics.compute_mean(stat_2_temp, num_2)
+    local material_1_intensity::Vector{Float64} = RunningStatistics.mean.(stat_1_intensity)
+    local material_2_intensity::Vector{Float64} = RunningStatistics.mean.(stat_2_intensity)
+    local material_1_temp::Vector{Float64} = RunningStatistics.mean.(stat_1_temp)
+    local material_2_temp::Vector{Float64} = RunningStatistics.mean.(stat_2_temp)
 
     # Variance values
-    local variance_1_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_1_intensity, num_1, material_1_intensity)
-    local variance_2_intensity::Vector{Float64} = RunningStatistics.compute_variance(stat_2_intensity, num_2, material_2_intensity)
-    local variance_1_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_1_temp, num_1, material_1_temp)
-    local variance_2_temp::Vector{Float64} = RunningStatistics.compute_variance(stat_2_temp, num_2, material_2_temp)
+    local variance_1_intensity::Vector{Float64} = RunningStatistics.variance.(stat_1_intensity)
+    local variance_2_intensity::Vector{Float64} = RunningStatistics.variance.(stat_2_intensity)
+    local variance_1_temp::Vector{Float64} = RunningStatistics.variance.(stat_1_temp)
+    local variance_2_temp::Vector{Float64} = RunningStatistics.variance.(stat_2_temp)
 
     # Maximum and minimum values
-    local max_intensity_1::Vector{Float64} = RunningStatistics.compute_max(stat_1_intensity)
-    local min_intensity_1::Vector{Float64} = RunningStatistics.compute_min(stat_1_intensity)
-    local max_intensity_2::Vector{Float64} = RunningStatistics.compute_max(stat_2_intensity)
-    local min_intensity_2::Vector{Float64} = RunningStatistics.compute_min(stat_2_intensity)
-    local max_temp_1::Vector{Float64} = RunningStatistics.compute_max(stat_1_temp)
-    local min_temp_1::Vector{Float64} = RunningStatistics.compute_min(stat_1_temp)
-    local max_temp_2::Vector{Float64} = RunningStatistics.compute_max(stat_2_temp)
-    local min_temp_2::Vector{Float64} = RunningStatistics.compute_min(stat_2_temp)
+    local max_intensity_1::Vector{Float64} = RunningStatistics.greatest.(stat_1_intensity)
+    local min_intensity_1::Vector{Float64} = RunningStatistics.least.(stat_1_intensity)
+    local max_intensity_2::Vector{Float64} = RunningStatistics.greatest.(stat_2_intensity)
+    local min_intensity_2::Vector{Float64} = RunningStatistics.least.(stat_2_intensity)
+    local max_temp_1::Vector{Float64} = RunningStatistics.greatest.(stat_1_temp)
+    local min_temp_1::Vector{Float64} = RunningStatistics.least.(stat_1_temp)
+    local max_temp_2::Vector{Float64} = RunningStatistics.greatest.(stat_2_temp)
+    local min_temp_2::Vector{Float64} = RunningStatistics.least.(stat_2_temp)
 
     local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2)
 

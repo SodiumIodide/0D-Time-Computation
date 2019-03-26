@@ -30,7 +30,7 @@ module ExponentialHist
         local point::Float64 = log10(x)
         local data_bin_no::Int64 = bin_no(point, exh.m_delta, exh.m_min, exh.m_length)
 
-        if (data_bin_no != 0)
+        if ((data_bin_no != 0) && (exh.m_length >= data_bin_no))
             exh.m_bin[data_bin_no] += 1.0
         end
 

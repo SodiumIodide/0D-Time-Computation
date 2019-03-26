@@ -5,7 +5,7 @@ global const num_t = convert(Int64, 1e5)
 global const num_t_hist = convert(Int64, 1e5)
 global const num_divs = convert(Int64, 1e5)
 global const num_divs_hist = convert(Int64, 1e5)
-global const max_iterations = convert(Int64, 1e4)
+global const max_iterations = convert(Int64, 1e5)
 global const max_iterations_hist = convert(Int64, 1e5)
 
 # Initial conditions
@@ -16,9 +16,10 @@ global const init_temp = 1e0  # eV
 #global const tolerance = convert(Float64, eps(Float32))
 global const tolerance = 1e-5
 global const num_say = convert(Int64, 1e3)
+global const num_say_hist = convert(Int64, 1e4)
 
 # Number of bins to produce in PDF
-global const num_bins = convert(Int64, 3e1)
+global const num_bins = convert(Int64, 5e1)
 
 # Physics constants
 global const sol = 29979245800.0  # cm/s
@@ -29,8 +30,8 @@ global const sb_const = 5.6704e-5 * 11604.525^4  # erg/cm^2-s-eV^4
 global const t_max = 1e-11  # s
 global const t_init = 0.0  # s
 global const delta_t = (t_max - t_init) / num_t  # s
-global const chord_1 = 1e-4 / sol  # s
-global const chord_2 = 5e-4 / sol  # s
+global const chord_1 = 1e-3 / sol  # s
+global const chord_2 = 5e-3 / sol  # s
 global const dens_1 = 1.0  # g/cm^3
 global const dens_2 = 1.0  # g/cm^3
 global const opacity_1 = 1.0  # cm^-1

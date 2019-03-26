@@ -44,12 +44,12 @@ def main():
         nonlinear_mc = pandas.read_csv(f"{CSVPATH}/nonlinearmc.csv")
     except FileNotFoundError:
         mc_exists = False
-    #intensity1arr,freqintensity1,intensity2arr,freqintensity2,temperature1arr,freqtemperature1,temperature2arr,freqtemperature2,opacity1arr,opacity2arr
+    #time,intensity1arr,freqintensity1,intensity2arr,freqintensity2,temperature1arr,freqtemperature1,temperature2arr,freqtemperature2,opacity1arr,freqopacity1,opacity2arr,freqopacity2
     try:
         mc_hist_data = pandas.read_csv(f"{HISTPATH}/mc_pdf.csv")
     except FileNotFoundError:
         mc_hist = False
-    #intensity1arr,freqintensity1,intensity2arr,freqintensity2,temperature1arr,freqtemperature1,temperature2arr,freqtemperature2,opacity1arr,opacity2arr
+    #time,intensity1arr,freqintensity1,intensity2arr,freqintensity2,temperature1arr,freqtemperature1,temperature2arr,freqtemperature2,opacity1arr,opacity2arr
     try:
         re_hist_data = pandas.read_csv(f"{HISTPATH}/realizations_pdf.csv")
     except FileNotFoundError:
@@ -636,13 +636,15 @@ def main():
 
     # HISTOGRAM PLOTS
     if mc_hist:
+        time_ss = mc_hist_data['time'][0]
+
         # Intensity Material 1
-        plt.plot(mc_hist_data['intensity1arr'], mc_hist_data['freqintensity1'])
-        plt.title("Intensity 1 Histogram - Monte Carlo")
+        plt.plot(mc_hist_data['intensity1arr'][1:len(mc_hist_data['intensity1arr'])-1], mc_hist_data['freqintensity1'][1:len(mc_hist_data['freqintensity1'])-1])
+        plt.title(f"Intensity 1 Histogram - Monte Carlo (Time={time_ss:.4E} ct)")
         plt.xlabel("Intensity (erg/cm^2-s)")
         plt.ylabel("Frequency")
-        plt.xscale("log")
-        plt.yscale("log")
+        #plt.xscale("log")
+        #plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/mc_intensity_1_hist.png")
@@ -650,12 +652,12 @@ def main():
         plt.clf()
 
         # Intensity Material 2
-        plt.plot(mc_hist_data['intensity2arr'], mc_hist_data['freqintensity2'])
-        plt.title("Intensity 2 Histogram - Monte Carlo")
+        plt.plot(mc_hist_data['intensity2arr'][1:len(mc_hist_data['intensity2arr'])-1], mc_hist_data['freqintensity2'][1:len(mc_hist_data['freqintensity2'])-1])
+        plt.title(f"Intensity 2 Histogram - Monte Carlo (Time={time_ss:.4E} ct)")
         plt.xlabel("Intensity (erg/cm^2-s)")
         plt.ylabel("Frequency")
-        plt.xscale("log")
-        plt.yscale("log")
+        #plt.xscale("log")
+        #plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/mc_intensity_2_hist.png")
@@ -663,12 +665,12 @@ def main():
         plt.clf()
 
         # Temperature Material 1
-        plt.plot(mc_hist_data['temperature1arr'], mc_hist_data['freqtemperature1'])
-        plt.title("Temperature 1 Histogram - Monte Carlo")
+        plt.plot(mc_hist_data['temperature1arr'][1:len(mc_hist_data['temperature1arr'])-1], mc_hist_data['freqtemperature1'][1:len(mc_hist_data['freqtemperature1'])-1])
+        plt.title(f"Temperature 1 Histogram - Monte Carlo (Time={time_ss:.4E} ct)")
         plt.xlabel("Temperature (eV)")
         plt.ylabel("Frequency")
-        plt.xscale("log")
-        plt.yscale("log")
+        #plt.xscale("log")
+        #plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/mc_temperature_1_hist.png")
@@ -676,12 +678,12 @@ def main():
         plt.clf()
 
         # Temperature Material 2
-        plt.plot(mc_hist_data['temperature2arr'], mc_hist_data['freqtemperature2'])
-        plt.title("Temperature 2 Histogram - Monte Carlo")
+        plt.plot(mc_hist_data['temperature2arr'][1:len(mc_hist_data['temperature2arr'])-1], mc_hist_data['freqtemperature2'][1:len(mc_hist_data['freqtemperature2'])-1])
+        plt.title(f"Temperature 2 Histogram - Monte Carlo (Time={time_ss:.4E} ct)")
         plt.xlabel("Temperature (eV)")
         plt.ylabel("Frequency")
-        plt.xscale("log")
-        plt.yscale("log")
+        #plt.xscale("log")
+        #plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/mc_temperature_2_hist.png")
@@ -689,11 +691,11 @@ def main():
         plt.clf()
 
         # Opacity Material 1
-        plt.plot(mc_hist_data['opacity1arr'], mc_hist_data['freqtemperature1'])
-        plt.title("Opacity 1 Histogram - Monte Carlo")
+        plt.plot(mc_hist_data['opacity1arr'][1:len(mc_hist_data['opacity1arr'])-1], mc_hist_data['freqopacity1'][1:len(mc_hist_data['freqopacity1'])-1])
+        plt.title(f"Opacity 1 Histogram - Monte Carlo (Time={time_ss:.4E} ct)")
         plt.xlabel("Opacity (cm^-1)")
-        plt.xscale("log")
-        plt.yscale("log")
+        #plt.xscale("log")
+        #plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/mc_opacity_1_hist.png")
@@ -701,11 +703,11 @@ def main():
         plt.clf()
 
         # Opacity Material 2
-        plt.plot(mc_hist_data['opacity2arr'], mc_hist_data['freqtemperature2'])
-        plt.title("Opacity 2 Histogram - Monte Carlo")
+        plt.plot(mc_hist_data['opacity2arr'][1:len(mc_hist_data['opacity2arr'])-1], mc_hist_data['freqopacity2'][1:len(mc_hist_data['freqopacity2'])-1])
+        plt.title(f"Opacity 2 Histogram - Monte Carlo (Time={time_ss:.4E} ct)")
         plt.xlabel("Opacity (cm^-1)")
-        plt.xscale("log")
-        plt.yscale("log")
+        #plt.xscale("log")
+        #plt.yscale("log")
         plt.grid(b=True, which="both", axis="both")
         plt.tight_layout()
         plt.savefig(f"{PLOTPATH}/mc_opacity_2_hist.png")
@@ -766,7 +768,7 @@ def main():
         plt.clf()
 
         # Opacity Material 1
-        plt.plot(re_hist_data['opacity1arr'], re_hist_data['freqtemperature1'])
+        plt.plot(re_hist_data['opacity1arr'], re_hist_data['freqopacity1'])
         plt.title("Opacity 1 Histogram - Realizations")
         plt.xlabel("Opacity (cm^-1)")
         plt.xscale("log")
@@ -778,7 +780,7 @@ def main():
         plt.clf()
 
         # Opacity Material 2
-        plt.plot(re_hist_data['opacity2arr'], re_hist_data['freqtemperature2'])
+        plt.plot(re_hist_data['opacity2arr'], re_hist_data['freqopacity2'])
         plt.title("Opacity 2 Histogram - Realizations")
         plt.xlabel("Opacity (cm^-1)")
         plt.xscale("log")
