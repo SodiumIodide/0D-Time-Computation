@@ -3,9 +3,9 @@
 # Histogram and problem parameters
 global const num_t = convert(Int64, 1e5)
 global const num_t_hist = convert(Int64, 1e5)
-global const num_divs = convert(Int64, 1e5)
-global const num_divs_hist = convert(Int64, 1e5)
-global const max_iterations = convert(Int64, 1e5)
+global const num_divs = convert(Int64, 1e3)
+global const num_divs_hist = convert(Int64, 1e3)
+global const max_iterations = convert(Int64, 1e4)
 global const max_iterations_hist = convert(Int64, 1e5)
 
 # Initial conditions
@@ -14,7 +14,7 @@ global const init_temp = 1e0  # eV
 
 # Iteration condition
 #global const tolerance = convert(Float64, eps(Float32))
-global const tolerance = 1e-5
+global const tolerance = 1e-3
 global const num_say = convert(Int64, 1e3)
 global const num_say_hist = convert(Int64, 1e4)
 

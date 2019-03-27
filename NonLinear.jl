@@ -1,6 +1,7 @@
 #!/usr/bin/env julia
 
 include("GeometryGen.jl")
+include("PhysicsFunctions.jl")
 include("MeshMap.jl")
 include("RunningStatistics.jl")
 using Random
@@ -17,51 +18,6 @@ function main()::Nothing
     # Computational values
     local iteration_number::Int64 = 0
     local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
-
-    function sigma_a(opacity_term::Float64, temp::Float64)::Float64
-        return opacity_term / temp^3
-    end
-
-    function c_v(spec_heat_term::Float64, temp::Float64)::Float64
-        return spec_heat_term
-    end
-
-    function balance_a(intensity::Float64, temp::Float64, delta_t::Float64, opacity::Float64, past_intensity::Float64)::Float64
-        local term_1::Float64 = intensity
-        local term_2::Float64 = - delta_t * sol^2 * opacity * arad * temp^4
-        local term_3::Float64 = delta_t * sol * opacity * intensity
-        local term_4::Float64 = - past_intensity
-
-        return term_1 + term_2 + term_3 + term_4
-    end
-
-    function balance_b(intensity::Float64, temp::Float64, delta_t::Float64, opacity::Float64, spec_heat::Float64, density::Float64, past_temp::Float64)::Float64
-        local term_1::Float64 = temp
-        local term_2::Float64 = - delta_t / (density * spec_heat) * opacity * intensity
-        local term_3::Float64 = delta_t / (density * spec_heat) * sol * opacity * arad * temp^4
-        local term_4::Float64 = - past_temp
-
-        return term_1 + term_2 + term_3 + term_4
-    end
-
-    function make_jacobian(intensity::Float64, temp::Float64, delta_t::Float64, opacity_term::Float64, density::Float64, spec_heat_term::Float64)::Array{Float64, 2}
-        local term_1::Float64 = 1.0 + delta_t * sol * opacity_term / temp^3
-        local term_2::Float64 = - delta_t * sol^2 * opacity_term * arad - 3.0 * delta_t * sol * opacity_term / temp^4 * intensity
-        local term_3::Float64 = - delta_t / (density * spec_heat_term) * opacity_term / temp^3
-        local term_4::Float64 = 1.0 + 3.0 * delta_t * opacity_term / (density * spec_heat_term * temp^4) * intensity + delta_t / (density * spec_heat_term) * sol * opacity_term * arad
-
-        return [
-            term_1 term_2;
-            term_3 term_4
-        ]
-    end
-
-    function relative_change(delta::Vector{Float64}, original_terms::Vector{Float64})::Float64
-        local current_norm::Float64 = sqrt(sum([x^2 for x in delta]))
-        local original_norm::Float64 = sqrt(sum([x^2 for x in original_terms]))
-
-        return current_norm / original_norm
-    end
 
     # Arrays for online computation
     local stat_1_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
@@ -91,28 +47,25 @@ function main()::Nothing
             local old_terms::Vector{Float64} = deepcopy(original_terms)
             local new_terms::Vector{Float64} = deepcopy(original_terms)
 
-            local past_intensity::Float64 = intensity_value
-            local past_temp::Float64 = temp_value
-
             local error::Float64 = 1.0
 
             # Newtonian loop
             while (error >= tolerance)
-                local opacity::Float64 = sigma_a(opacity_term, old_terms[2])
-                local spec_heat::Float64 = c_v(spec_heat_term, old_terms[2])
+                local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
+                local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
 
-                local jacobian::Array{Float64, 2} = make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
+                local jacobian::Array{Float64, 2} = PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
-                    balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, past_intensity),
-                    balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, past_temp)
+                    PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
                 ]
 
-                local delta::Vector{Float64} = jacobian \ - func_vector
+                local delta::Vector{Float64} = @inbounds @fastmath jacobian \ - func_vector
 
-                new_terms = delta + old_terms
+                @inbounds new_terms = @fastmath delta + old_terms
                 old_terms = new_terms
 
-                error = relative_change(delta, original_terms)
+                error = PhysicsFunctions.relative_change(delta, original_terms)
             end
             intensity_value = new_terms[1]
             temp_value = new_terms[2]
@@ -136,7 +89,7 @@ function main()::Nothing
         iteration_number += 1
 
         if (iteration_number % num_say == 0)
-            println(string("Iteration Number ", iteration_number))
+            println(string("Realization Number ", iteration_number))
         end
 
         if (iteration_number > max_iterations)

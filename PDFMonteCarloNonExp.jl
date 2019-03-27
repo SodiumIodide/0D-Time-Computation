@@ -2,6 +2,7 @@
 
 include("Histogram.jl")
 include("PhysicsFunctions.jl")
+include("PDFFunctions.jl")
 using Random
 using DataFrames
 using CSV
@@ -40,36 +41,10 @@ function main()::Nothing
         return nothing
     end
 
-    function locate_steady_state(data::Vector{Float64})::Int64
-        local point::Float64 = 0.0
-        local last_point::Float64 = 0.0
-        local sec_last_point::Float64 = 0.0
-        local index::Int64 = 0
-        local last_index::Int64 = num_t
-        local steady_state_search::Bool = true
-
-        function frac_diff(point::Float64, pointn::Float64)::Float64
-            return abs(pointn - point) / point
-        end
-
-        # Naive pass through data - three same points in a row = steady state
-        while (steady_state_search)
-            index += 1
-            (point, last_point, sec_last_point) = (data[index], point, last_point)
-
-            if ((frac_diff(sec_last_point, point) <= 0.001) && (frac_diff(last_point, point) <= 0.001))
-                last_index = index
-                steady_state_search = false
-            end
-        end
-
-        return last_index
-    end
-
-    local intensity_1_ss::Int64 = locate_steady_state(vec([old_data.intensity1...]))
-    local intensity_2_ss::Int64 = locate_steady_state(vec([old_data.intensity2...]))
-    local temperature_1_ss::Int64 = locate_steady_state(vec([old_data.temperature1...]))
-    local temperature_2_ss::Int64 = locate_steady_state(vec([old_data.temperature2...]))
+    local intensity_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
+    local intensity_2_ss::Int64 = PDFFuncitons.locate_steady_state(vec([old_data.intensity2...]))
+    local temperature_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
+    local temperature_2_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature2...]))
 
     local steady_state_index::Int64 = max(intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss)
     local steady_state_time::Float64 = old_data.time[steady_state_index]

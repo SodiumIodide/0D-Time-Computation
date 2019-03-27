@@ -1,6 +1,7 @@
 #!/usr/bin/env julia
 
 include("GeometryGen.jl")
+include("PhysicsFunctions.jl")
 include("MeshMap.jl")
 include("RunningStatistics.jl")
 using Random
@@ -19,29 +20,6 @@ function main()::Nothing
 
     # Computational values
     local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
-
-    function sigma_a(opacity_term::Float64, temp::Float64)::Float64
-        return opacity_term / temp^3
-    end
-
-    function c_v(spec_heat_term::Float64, temp::Float64)::Float64
-        return spec_heat_term
-    end
-
-    function balance_intensity(opacity::Float64, past_intensity::Float64, past_temp::Float64)::Float64
-        local term_1::Float64 = delta_t * sol^2 * opacity * arad * past_temp^4
-        local term_2::Float64 = (1.0 - delta_t * sol * opacity) * past_intensity
-
-        return term_1 + term_2
-    end
-
-    function balance_temp(opacity::Float64, spec_heat::Float64, density::Float64, past_intensity::Float64, past_temp::Float64)::Float64
-        local term_1::Float64 = delta_t / (density * spec_heat) * opacity * past_intensity
-        local term_2::Float64 = - delta_t / (density * spec_heat) * sol * opacity * arad * past_temp^4
-        local term_3::Float64 = past_temp
-
-        return term_1 + term_2 + term_3
-    end
 
     # Parallel arrays
     local stat_1_intensity::Array{RunningStatistics.RunningStat, 2} = RunningStatistics.threadarray(num_t)
@@ -69,11 +47,11 @@ function main()::Nothing
             local delta_t_unstruct::Float64 = t_delta[index]
             local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = (material == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
 
-            local opacity::Float64 = sigma_a(opacity_term, temp_value)
-            local spec_heat::Float64 = c_v(spec_heat_term, temp_value)
+            local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, temp_value)
+            local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, temp_value)
 
-            local new_intensity_value::Float64 = balance_intensity(opacity, intensity_value, temp_value)
-            local new_temp_value::Float64 = balance_temp(opacity, spec_heat, dens, intensity_value, temp_value)
+            local new_intensity_value::Float64 = PhysicsFunctions.balance_intensity(opacity, intensity_value, temp_value)
+            local new_temp_value::Float64 = PhysicsFunctions.balance_temp(opacity, spec_heat, dens, intensity_value, temp_value)
 
             (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
 

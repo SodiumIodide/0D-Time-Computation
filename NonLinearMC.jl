@@ -14,12 +14,12 @@ function main()::Nothing
 
     # Computational values
     local iteration_number::Int64 = 0
-    local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
+    local times::Vector{Float64} = [@fastmath(x * delta_t + t_init) * sol for x in 1:num_t]
 
     # Probability for material sampling
-    local prob_1::Float64 = chord_1 / (chord_1 + chord_2)
-    local change_prob_1::Float64 = 1.0 / chord_1 * delta_t
-    local change_prob_2::Float64 = 1.0 / chord_2 * delta_t
+    local prob_1::Float64 = @fastmath chord_1 / (chord_1 + chord_2)
+    local change_prob_1::Float64 = @fastmath 1.0 / chord_1 * delta_t
+    local change_prob_2::Float64 = @fastmath 1.0 / chord_2 * delta_t
     if ((change_prob_1 > 1.0) || (change_prob_2 > 1.0))
         println("The value for delta_t is too large for sampling")
         return nothing
@@ -59,18 +59,18 @@ function main()::Nothing
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
 
                 if (material_num == 1)
-                    RunningStatistics.push(stat_1_intensity[index], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_1_temp[index], temp_value)  # eV
+                    @inbounds RunningStatistics.push(stat_1_intensity[index], intensity_value)  # erg/cm^2-s
+                    @inbounds RunningStatistics.push(stat_1_temp[index], temp_value)  # eV
                 else
-                    RunningStatistics.push(stat_2_intensity[index], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_2_temp[index], temp_value)  # eV
+                    @inbounds RunningStatistics.push(stat_2_intensity[index], intensity_value)  # erg/cm^2-s
+                    @inbounds RunningStatistics.push(stat_2_temp[index], temp_value)  # eV
                 end
             else
                 material_num = (material_num == 1) ? 2 : 1
             end
         end
 
-        iteration_number += 1
+        @fastmath iteration_number += 1
 
         if (iteration_number % num_say == 0)
             println("History Number ", iteration_number)

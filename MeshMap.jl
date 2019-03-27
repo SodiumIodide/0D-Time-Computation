@@ -165,28 +165,28 @@ module MeshMap
                 local weight_tally::Float64 = 0.0  # unit*s
 
                 # Increment structured distance tally
-                struct_distance_tally += struct_delta  # s
+                @fastmath struct_distance_tally += struct_delta  # s
 
                 # Carry over leftover distance
                 if (leftover_distance > 0.0)
                     # If leftover distance is still over-reaching tally boundaries
                     if ((distance_tally + leftover_distance) >= struct_distance_tally)
                         delta = struct_delta  # s
-                        leftover_distance = unstruct_distance_tally - struct_distance_tally  # s
+                        leftover_distance = @fastmath unstruct_distance_tally - struct_distance_tally  # s
                         distance_overlap = true
                     else
                         delta = leftover_distance  # s
                         leftover_distance = 0.0  # s
                     end
-                    weight_tally += delta * unstructured[counter] * switch  # unit*cm
-                    distance_tally += delta  # s
+                    @inbounds @fastmath weight_tally += delta * unstructured[counter] * switch  # unit*cm
+                    @fastmath distance_tally += delta  # s
                 end
 
                 while ((!distance_overlap) && (counter < unstruct_size))
                     # Increment counter (unstructured index)
                     counter += 1
                     # Increment unstructured distance tally
-                    unstruct_distance_tally += unstruct_delta[counter]  # s
+                    @fastmath @inbounds unstruct_distance_tally += unstruct_delta[counter]  # s
 
                     # Material number for calculations
                     # Tally switch for each material
@@ -198,22 +198,22 @@ module MeshMap
 
                     # Check for boundary overlap
                     if ((unstruct_distance_tally >= struct_distance_tally) || (counter == unstruct_size))
-                        delta = struct_distance_tally - distance_tally  # s
-                        leftover_distance = unstruct_distance_tally - struct_distance_tally  # s
+                        delta = @fastmath struct_distance_tally - distance_tally  # s
+                        leftover_distance = @fastmath unstruct_distance_tally - struct_distance_tally  # s
                         distance_overlap = true
                     else
                         delta = unstruct_delta[counter]  # s
                     end
 
                     # Increment the known distance tally
-                    distance_tally += delta  # s
+                    @fastmath distance_tally += delta  # s
 
                     # Apply linear weighted tally
-                    weight_tally += delta * unstructured[counter] * switch  # unit*s
+                    @inbounds @fastmath weight_tally += delta * unstructured[counter] * switch  # unit*s
                 end  # Untructured loop
 
                 # Average the results, or just append if no results previously
-                material_struct[i, k] += (weight_tally / struct_delta)  # unit
+                @inbounds @fastmath material_struct[i, k] += (weight_tally / struct_delta)  # unit
             end  # Structured loop
         end  # Material loop
         return material_struct

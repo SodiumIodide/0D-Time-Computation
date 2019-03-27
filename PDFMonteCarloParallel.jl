@@ -42,36 +42,10 @@ function main()::Nothing
         return nothing
     end
 
-    function locate_steady_state(data::Vector{Float64})::Int64
-        local point::Float64 = 0.0
-        local last_point::Float64 = 0.0
-        local sec_last_point::Float64 = 0.0
-        local index::Int64 = 0
-        local last_index::Int64 = num_t
-        local steady_state_search::Bool = true
-
-        function frac_diff(point::Float64, pointn::Float64)::Float64
-            return abs(pointn - point) / point
-        end
-
-        # Naive pass through data - three same points in a row = steady state
-        while (steady_state_search)
-            index += 1
-            (point, last_point, sec_last_point) = (data[index], point, last_point)
-
-            if ((frac_diff(sec_last_point, point) <= 0.001) && (frac_diff(last_point, point) <= 0.001))
-                last_index = index
-                steady_state_search = false
-            end
-        end
-
-        return last_index
-    end
-
-    local intensity_1_ss::Int64 = locate_steady_state(vec([old_data.intensity1...]))
-    local intensity_2_ss::Int64 = locate_steady_state(vec([old_data.intensity2...]))
-    local temperature_1_ss::Int64 = locate_steady_state(vec([old_data.temperature1...]))
-    local temperature_2_ss::Int64 = locate_steady_state(vec([old_data.temperature2...]))
+    local intensity_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
+    local intensity_2_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
+    local temperature_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
+    local temperature_2_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature2...]))
 
     local steady_state_index::Int64 = max(intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss)
     local steady_state_time::Float64 = old_data.time[steady_state_index]
@@ -128,7 +102,8 @@ function main()::Nothing
     end
 
     # Computational values
-    local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:chosenindex]
+    local new_delta_t::Float64 = (steady_state_time / sol) / num_t_hist
+    local times::Vector{Float64} = [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
     # Probability for material sampling
     local prob_1::Float64 = chord_1 / (chord_1 + chord_2)
@@ -164,8 +139,8 @@ function main()::Nothing
                 local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, temp_value)
                 local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, temp_value)
 
-                local new_intensity_value::Float64 = PhysicsFunctions.balance_intensity(opacity, intensity_value, temp_value)
-                local new_temp_value::Float64 = PhysicsFunctions.balance_temp(opacity, spec_heat, dens, intensity_value, temp_value)
+                local new_intensity_value::Float64 = PhysicsFunctions.balance_intensity(opacity, new_delta_t, intensity_value, temp_value)
+                local new_temp_value::Float64 = PhysicsFunctions.balance_temp(opacity, spec_heat, dens, new_delta_t, intensity_value, temp_value)
 
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
 

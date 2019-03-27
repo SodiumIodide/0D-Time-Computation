@@ -24,7 +24,7 @@ module RunningStatistics
     end
 
     function push(r::RunningStat, x::Float64)::Nothing
-        r.m_n += 1
+        @fastmath r.m_n += 1
 
         # See Knuth TAOCP vol 2, 3rd edition, page 232
         if (r.m_n == 1)
@@ -32,19 +32,16 @@ module RunningStatistics
             r.m_oldS = 0.0
             r.m_min = r.m_max = x
         else
-            r.m_newM = r.m_oldM + (x - r.m_oldM) / r.m_n
-            r.m_newS = r.m_oldS + (x - r.m_oldM) * (x - r.m_newM)
+            r.m_newM = @fastmath r.m_oldM + (x - r.m_oldM) / r.m_n
+            r.m_newS = @fastmath r.m_oldS + (x - r.m_oldM) * (x - r.m_newM)
 
             # Set up for next iteration
             r.m_oldM = r.m_newM
             r.m_oldS = r.m_newS
 
             # Min and max
-            if (x < r.m_min)
-                r.m_min = x
-            elseif (x > r.m_max)
-                r.m_max = x
-            end
+            r.m_min = @fastmath min(x, r.m_min)
+            r.m_max = @fastmath max(x, r.m_max)
         end
 
         return nothing
@@ -59,11 +56,11 @@ module RunningStatistics
     end
 
     function variance(r::RunningStat)::Float64
-        return (r.m_n > 1) ? r.m_newS / (r.m_n - 1) : 0.0
+        return (r.m_n > 1) ? @fastmath(r.m_newS / (r.m_n - 1)) : 0.0
     end
 
     function standard_devation(r::RunningStat)::Float64
-        return sqrt(variance(r))
+        return @fastmath sqrt(variance(r))
     end
 
     function least(r::RunningStat)::Float64
@@ -80,26 +77,26 @@ module RunningStatistics
     end
 
     function total(mat_r::Array{RunningStat, 2})::Vector{Float64}
-        return vec(sum((@. convert(Float64, num(mat_r))), dims=2))
+        return @inbounds @fastmath vec(sum((@. convert(Float64, num(mat_r))), dims=2))
     end
 
     function compute_mean(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64})::Vector{Float64}
-        return vec(sum((@. mean(mat_r) * convert(Float64, num(mat_r))), dims=2) ./ num_vec)
+        return @inbounds @fastmath vec(sum((@. mean(mat_r) * convert(Float64, num(mat_r))), dims=2) ./ num_vec)
     end
 
     function compute_variance(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64}, mean_vec::Vector{Float64})::Vector{Float64}
-        local prefix::Vector{Float64} = vec(@. (num_vec - 1.0)^(-1))
-        local first_sum::Vector{Float64} = vec(sum((@. (convert(Float64, num(mat_r)) - 1.0) * variance(mat_r)), dims=2))
-        local second_sum::Vector{Float64} = vec(sum((@. convert(Float64, num(mat_r)) * (mean(mat_r) - mean_vec)^2), dims=2))
+        local prefix::Vector{Float64} = @inbounds @fastmath vec(@. (num_vec - 1.0)^(-1))
+        local first_sum::Vector{Float64} = @inbounds @fastmath vec(sum((@. (convert(Float64, num(mat_r)) - 1.0) * variance(mat_r)), dims=2))
+        local second_sum::Vector{Float64} = @inbounds @fastmath vec(sum((@. convert(Float64, num(mat_r)) * (mean(mat_r) - mean_vec)^2), dims=2))
 
-        return @. prefix * (first_sum + second_sum)
+        return @inbounds @fastmath @. prefix * (first_sum + second_sum)
     end
 
     function compute_min(mat_r::Array{RunningStat, 2})::Vector{Float64}
-        return vec(minimum((@. least(mat_r)), dims=2))
+        return @inbounds @fastmath vec(minimum((@. least(mat_r)), dims=2))
     end
 
     function compute_max(mat_r::Array{RunningStat, 2})::Vector{Float64}
-        return vec(maximum((@. greatest(mat_r)), dims=2))
+        return @inbounds @fastmath vec(maximum((@. greatest(mat_r)), dims=2))
     end
 end
