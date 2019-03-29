@@ -24,6 +24,7 @@ module RunningStatistics
     end
 
     function push(r::RunningStat, x::Float64)::Nothing
+        set_zero_subnormals(true)
         @fastmath r.m_n += 1
 
         # See Knuth TAOCP vol 2, 3rd edition, page 232
@@ -52,14 +53,16 @@ module RunningStatistics
     end
 
     function mean(r::RunningStat)::Float64
-        return (r.m_n > 0) ? r.m_newM : 0.0
+        return @fastmath (r.m_n > 0) ? r.m_newM : 0.0
     end
 
     function variance(r::RunningStat)::Float64
-        return (r.m_n > 1) ? @fastmath(r.m_newS / (r.m_n - 1)) : 0.0
+        set_zero_subnormals(true)
+        return @fastmath (r.m_n > 1) ? (r.m_newS / (r.m_n - 1)) : 0.0
     end
 
     function standard_devation(r::RunningStat)::Float64
+        set_zero_subnormals(true)
         return @fastmath sqrt(variance(r))
     end
 
@@ -77,14 +80,17 @@ module RunningStatistics
     end
 
     function total(mat_r::Array{RunningStat, 2})::Vector{Float64}
+        set_zero_subnormals(true)
         return @inbounds @fastmath vec(sum((@. convert(Float64, num(mat_r))), dims=2))
     end
 
     function compute_mean(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64})::Vector{Float64}
+        set_zero_subnormals(true)
         return @inbounds @fastmath vec(sum((@. mean(mat_r) * convert(Float64, num(mat_r))), dims=2) ./ num_vec)
     end
 
     function compute_variance(mat_r::Array{RunningStat, 2}, num_vec::Vector{Float64}, mean_vec::Vector{Float64})::Vector{Float64}
+        set_zero_subnormals(true)
         local prefix::Vector{Float64} = @inbounds @fastmath vec(@. (num_vec - 1.0)^(-1))
         local first_sum::Vector{Float64} = @inbounds @fastmath vec(sum((@. (convert(Float64, num(mat_r)) - 1.0) * variance(mat_r)), dims=2))
         local second_sum::Vector{Float64} = @inbounds @fastmath vec(sum((@. convert(Float64, num(mat_r)) * (mean(mat_r) - mean_vec)^2), dims=2))
@@ -93,10 +99,12 @@ module RunningStatistics
     end
 
     function compute_min(mat_r::Array{RunningStat, 2})::Vector{Float64}
+        set_zero_subnormals(true)
         return @inbounds @fastmath vec(minimum((@. least(mat_r)), dims=2))
     end
 
     function compute_max(mat_r::Array{RunningStat, 2})::Vector{Float64}
+        set_zero_subnormals(true)
         return @inbounds @fastmath vec(maximum((@. greatest(mat_r)), dims=2))
     end
 end

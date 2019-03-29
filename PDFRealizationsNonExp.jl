@@ -11,6 +11,8 @@ using CSV
 include("Constants.jl")
 
 function main()::Nothing
+    set_zero_subnormals(true)
+
     # Read previous data to explicitly create binned elements
     # The Monte Carlo data is read, because it is the faster computation method
     # (in comparison to realization generation)
@@ -44,12 +46,12 @@ function main()::Nothing
         return nothing
     end
 
-    local intensity_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
-    local intensity_2_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
-    local temperature_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
-    local temperature_2_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature2...]))
+    local intensity_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
+    local intensity_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
+    local temperature_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
+    local temperature_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature2...]))
 
-    local steady_state_index::Int64 = max(intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss)
+    local steady_state_index::Int64 = @fastmath maximum([intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss])
     local steady_state_time::Float64 = old_data.time[steady_state_index]
 
     println("Steady state index found to occur at point ", steady_state_index, ", time=", steady_state_time, " ct")
@@ -83,10 +85,10 @@ function main()::Nothing
         PhysicsFunctions.sigma_a(opacity_2, temperature_2_min);
         PhysicsFunctions.sigma_a(opacity_2, temperature_2_max)
     ]
-    local opacity_1_min::Float64 = minimum(opacity_1_op)
-    local opacity_1_max::Float64 = maximum(opacity_1_op)
-    local opacity_2_min::Float64 = minimum(opacity_2_op)
-    local opacity_2_max::Float64 = maximum(opacity_2_op)
+    local opacity_1_min::Float64 = @fastmath minimum(opacity_1_op)
+    local opacity_1_max::Float64 = @fastmath maximum(opacity_1_op)
+    local opacity_2_min::Float64 = @fastmath minimum(opacity_2_op)
+    local opacity_2_max::Float64 = @fastmath maximum(opacity_2_op)
 
     # Arrays for binning
     local intensity_1_bin::Histogram.Hist = Histogram.Hist(num_bins, intensity_1_min, intensity_1_max)
@@ -104,20 +106,23 @@ function main()::Nothing
 
     # Computational values
     local iteration_number::Int64 = 0
-    local new_delta_t::Float64 = (steady_state_time / sol) / num_t_hist
-    local times::Vector{Float64} = [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
+    local new_end_time::Float64 = @fastmath steady_state_time / sol
+    local new_delta_t::Float64 = @fastmath new_end_time / num_t_hist
+    local times::Vector{Float64} = @fastmath [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
     # Outer loop
     while (cont_calc_outer)
-        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, steady_state_time, num_divs_hist, rng=generator)
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, new_end_time, num_divs_hist, rng=generator)
 
         # First loop uses initial conditions
         local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
+        local material_num::Int32 = @inbounds materials[1]
 
         # Inner loop
-        for (index, material) in enumerate(materials)
-            local delta_t_unstruct::Float64 = t_delta[index]
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = (material == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
+        for index = 1:num_cells
+            material_num = @inbounds materials[index]
+            local delta_t_unstruct::Float64 = @inbounds t_delta[index]
+            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
 
             local original_terms::Vector{Float64} = [
                 intensity_value,
@@ -129,44 +134,44 @@ function main()::Nothing
             local error::Float64 = 1.0
 
             # Newtonian loop
-            while (error >= tolerance)
-                local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
-                local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
+            while @fastmath(error >= tolerance)
+                local opacity::Float64 = @inbounds PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
+                local spec_heat::Float64 = @inbounds PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
 
-                local jacobian::Array{Float64, 2} = PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
+                local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
-                    PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
-                    PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
+                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
                 ]
 
-                local delta::Vector{Float64} = jacobian \ - func_vector
+                local delta::Vector{Float64} = @inbounds @fastmath jacobian \ - func_vector
 
-                new_terms = delta + old_terms
+                new_terms = @fastmath delta + old_terms
                 old_terms = new_terms
 
                 error = PhysicsFunctions.relative_change(delta, original_terms)
             end
-            intensity_value = new_terms[1]  # erg/cm^2-s
-            temp_value = new_terms[2]  # eV
-
-            if (material == 1)
-                Histogram.push(intensity_1_bin, intensity_value)
-                Histogram.push(temperature_1_bin, temp_value)
-                Histogram.push(opacity_1_bin, PhysicsFunctions.sigma_a(opacity_1, temp_value))
-            else
-                Histogram.push(intensity_2_bin, intensity_value)
-                Histogram.push(temperature_2_bin, temp_value)
-                Histogram.push(opacity_2_bin, PhysicsFunctions.sigma_a(opacity_2, temp_value))
-            end
+            intensity_value = @inbounds new_terms[1]  # erg/cm^2-s
+            temp_value = @inbounds new_terms[2]  # eV
         end
 
-        iteration_number += 1
+        if @fastmath(material_num == 1)
+            Histogram.push(intensity_1_bin, intensity_value)
+            Histogram.push(temperature_1_bin, temp_value)
+            Histogram.push(opacity_1_bin, PhysicsFunctions.sigma_a(opacity_1, temp_value))
+        else
+            Histogram.push(intensity_2_bin, intensity_value)
+            Histogram.push(temperature_2_bin, temp_value)
+            Histogram.push(opacity_2_bin, PhysicsFunctions.sigma_a(opacity_2, temp_value))
+        end
 
-        if (iteration_number % num_say_hist == 0)
+        @fastmath iteration_number += 1
+
+        if @fastmath(iteration_number % num_say_hist == 0)
             println("Realization Number ", iteration_number)
         end
 
-        if (iteration_number > max_iterations_hist)
+        if @fastmath(iteration_number > max_iterations_hist)
             cont_calc_outer = false
         end
     end
@@ -179,12 +184,12 @@ function main()::Nothing
     local material_2_opacity_bin::Vector{Float64} = Histogram.histogram(opacity_2_bin)
 
     # Normalize histograms
-    material_1_intensity_bin ./= sum(material_1_intensity_bin)
-    material_2_intensity_bin ./= sum(material_2_intensity_bin)
-    material_1_temperature_bin ./= sum(material_1_temperature_bin)
-    material_2_temperature_bin ./= sum(material_2_temperature_bin)
-    material_1_opacity_bin ./= sum(material_1_opacity_bin)
-    material_2_opacity_bin ./= sum(material_2_opacity_bin)
+    @fastmath material_1_intensity_bin ./= sum(material_1_intensity_bin)
+    @fastmath material_2_intensity_bin ./= sum(material_2_intensity_bin)
+    @fastmath material_1_temperature_bin ./= sum(material_1_temperature_bin)
+    @fastmath material_2_temperature_bin ./= sum(material_2_temperature_bin)
+    @fastmath material_1_opacity_bin ./= sum(material_1_opacity_bin)
+    @fastmath material_2_opacity_bin ./= sum(material_2_opacity_bin)
 
     local material_1_intensity_array::Vector{Float64} = Histogram.distribution(intensity_1_bin)
     local material_2_intensity_array::Vector{Float64} = Histogram.distribution(intensity_2_bin)

@@ -10,19 +10,21 @@ using Future
 include("Constants.jl")
 
 function main()::Nothing
+    set_zero_subnormals(true)
+
     # Iteration condition
     local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
-        [m; accumulate(Future.randjump, fill(big(10)^20, nthreads() - 1), init=m)]
+        @fastmath [m; accumulate(Future.randjump, fill(big(10)^20, nthreads() - 1), init=m)]
     end
 
     # Computational values
-    local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
+    local times::Vector{Float64} = @fastmath [(x * delta_t + t_init) * sol for x in 1:num_t]
 
     # Probability for material sampling
-    local prob_1::Float64 = chord_1 / (chord_1 + chord_2)
-    local change_prob_1::Float64 = 1.0 / chord_1 * delta_t
-    local change_prob_2::Float64 = 1.0 / chord_2 * delta_t
-    if ((change_prob_1 > 1.0) || (change_prob_2 > 1.0))
+    local prob_1::Float64 = @fastmath chord_1 / (chord_1 + chord_2)
+    local change_prob_1::Float64 = @fastmath 1.0 / chord_1 * delta_t
+    local change_prob_2::Float64 = @fastmath 1.0 / chord_2 * delta_t
+    if @fastmath((change_prob_1 > 1.0) || (change_prob_2 > 1.0))
         println("The value for delta_t is too large for sampling")
         return nothing
     end
@@ -45,15 +47,15 @@ function main()::Nothing
         local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
 
         # Sample initial starting material
-        rand_num = rand(gen_array[threadid()], Float64)
-        local material_num::Int32 = (rand_num < prob_1) ? 1 : 2
+        rand_num = @inbounds @fastmath rand(gen_array[threadid()], Float64)
+        local material_num::Int32 = @fastmath (rand_num < prob_1) ? 1 : 2
 
         # Inner loop
         for (index, time) in enumerate(times)
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
+            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
 
             # Sample whether material changes
-            rand_num = rand(gen_array[threadid()], Float64)
+            rand_num = @inbounds @fastmath rand(gen_array[threadid()], Float64)
 
             if (rand_num > change_prob)
                 local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, temp_value)
@@ -64,20 +66,20 @@ function main()::Nothing
 
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
 
-                if (material_num == 1)
-                    RunningStatistics.push(stat_1_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_1_temp[index, threadid()], temp_value)  # eV
+                if @fastmath(material_num == 1)
+                    @inbounds RunningStatistics.push(stat_1_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
+                    @inbounds RunningStatistics.push(stat_1_temp[index, threadid()], temp_value)  # eV
                 else
-                    RunningStatistics.push(stat_2_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
-                    RunningStatistics.push(stat_2_temp[index, threadid()], temp_value)  # eV
+                    @inbounds RunningStatistics.push(stat_2_intensity[index, threadid()], intensity_value)  # erg/cm^2-s
+                    @inbounds RunningStatistics.push(stat_2_temp[index, threadid()], temp_value)  # eV
                 end
             else
-                material_num = (material_num == 1) ? 2 : 1
+                material_num = @fastmath (material_num == 1) ? 2 : 1
             end
         end
 
         # Need to reference Core namespace for thread-safe printing
-        if (i % num_say == 0)
+        if @fastmath(i % num_say == 0)
             lock(printlock) do
                 Core.println("History Number ", i)
             end

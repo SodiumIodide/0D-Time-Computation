@@ -4,6 +4,7 @@ module GeometryGen
     using Random
 
     function get_geometry(chord_a::Float64, chord_b::Float64, end_time::Float64, num_divs::Int64; rng::MersenneTwister=MersenneTwister(1234))::Tuple{Vector{Float64}, Vector{Float64}, Vector{Int32}, Float64}
+        set_zero_subnormals(true)
         # Computational utilities
         local material_num::Int32
         local rand_num::Float64
@@ -20,7 +21,7 @@ module GeometryGen
         local num_cells::Int64 = 0
 
         # Sample size
-        chord = (chord_a < chord_b) ? chord_a : chord_b
+        chord = @fastmath min(chord_a, chord_b)
         local sample_time::Float64 = @fastmath chord * (-log(0.5))
         local est_size::Int64 = convert(Int64, ceil(@fastmath(end_time / sample_time * num_divs)))
 
@@ -30,24 +31,24 @@ module GeometryGen
 
         # Determine first material to use
         local prob_a::Float64 = @fastmath chord_a / (chord_a + chord_b)
-        rand_num = rand(rng, Float64)
-        material_num = (rand_num < prob_a) ? 1 : 2
+        rand_num = @fastmath rand(rng, Float64)
+        material_num = @fastmath (rand_num < prob_a) ? 1 : 2
 
         # Loop to build geometry
         while (cons_time < end_time)
             # Generate a random number
-            rand_num = rand(rng, Float64)
+            rand_num = @fastmath rand(rng, Float64)
 
             # Assign a chord length based on material number
-            chord = (material_num == 1) ? chord_a : chord_b  # s
+            chord = @fastmath (material_num == 1) ? chord_a : chord_b  # s
 
             # Calculate and append the material length
             time = @fastmath chord * (-log(rand_num))  # s
-            cons_time += @fastmath time  # s
+            @fastmath cons_time += time  # s
 
             # Check on thickness to not overshoot the boundary
-            if (cons_time > end_time)
-                time += @fastmath end_time - cons_time  # s
+            if @fastmath(cons_time > end_time)
+                @fastmath time += end_time - cons_time  # s
                 cons_time = end_time  # s
             end
 
@@ -60,7 +61,7 @@ module GeometryGen
             end
 
             # Update material number
-            material_num = (material_num == 1) ? 2 : 1
+            material_num = @fastmath (material_num == 1) ? 2 : 1
         end
 
         return (x_delta, x_arr, materials, num_cells)

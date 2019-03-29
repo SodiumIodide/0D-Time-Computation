@@ -17,10 +17,10 @@ module PDFFunctions
 
         # Naive pass through data - three same points in a row = steady state
         while (steady_state_search)
-            index += 1
-            (point, last_point, sec_last_point) = (data[index], point, last_point)
+            @fastmath index += 1
+            @inbounds (point, last_point, sec_last_point) = (data[index], point, last_point)
 
-            if ((frac_diff(sec_last_point, point) <= 0.001) && (frac_diff(last_point, point) <= 0.001))
+            if @fastmath((frac_diff(sec_last_point, point) <= 0.001) && (frac_diff(last_point, point) <= 0.001))
                 last_index = index
                 steady_state_search = false
             end

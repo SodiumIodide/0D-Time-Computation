@@ -11,13 +11,15 @@ using CSV
 include("Constants.jl")
 
 function main()::Nothing
+    set_zero_subnormals(true)
+
     # Iteration condition
     local cont_calc_outer::Bool = true
     local generator::MersenneTwister = MersenneTwister(1234)
 
     # Computational values
     local iteration_number::Int64 = 0
-    local times::Vector{Float64} = [(x * delta_t + t_init) * sol for x in 1:num_t]
+    local times::Vector{Float64} = @fastmath [(x * delta_t + t_init) * sol for x in 1:num_t]
 
     # Arrays for online computation
     local stat_1_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
@@ -37,8 +39,8 @@ function main()::Nothing
 
         # Inner loop
         for (index, material) in enumerate(materials)
-            local delta_t_unstruct::Float64 = t_delta[index]
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = (material == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
+            local delta_t_unstruct::Float64 = @inbounds t_delta[index]
+            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = @fastmath (material == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
 
             local original_terms::Vector{Float64} = [
                 intensity_value,
@@ -50,14 +52,14 @@ function main()::Nothing
             local error::Float64 = 1.0
 
             # Newtonian loop
-            while (error >= tolerance)
-                local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
-                local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
+            while @fastmath(error >= tolerance)
+                local opacity::Float64 = @inbounds PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
+                local spec_heat::Float64 = @inbounds PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
 
-                local jacobian::Array{Float64, 2} = PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
+                local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
-                    PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
-                    PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
+                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
                 ]
 
                 local delta::Vector{Float64} = @inbounds @fastmath jacobian \ - func_vector
@@ -67,32 +69,32 @@ function main()::Nothing
 
                 error = PhysicsFunctions.relative_change(delta, original_terms)
             end
-            intensity_value = new_terms[1]
-            temp_value = new_terms[2]
-            intensity[index] = intensity_value  # erg/cm^2-s
-            temp[index] = temp_value  # eV
+            intensity_value = @inbounds new_terms[1]
+            temp_value = @inbounds new_terms[2]
+            @inbounds intensity[index] = intensity_value  # erg/cm^2-s
+            @inbounds temp[index] = temp_value  # eV
         end
 
         local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
         local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
 
-        for k in 1:num_t
-            if (material_intensity_array[k, 1] != 0.0)
-                RunningStatistics.push(stat_1_intensity[k], material_intensity_array[k, 1])  # erg/cm^2-s
-                RunningStatistics.push(stat_1_temp[k], material_temp_array[k, 1])  # eV
+        @simd for k in 1:num_t
+            if @inbounds @fastmath(material_intensity_array[k, 1] != 0.0)
+                @inbounds RunningStatistics.push(stat_1_intensity[k], material_intensity_array[k, 1])  # erg/cm^2-s
+                @inbounds RunningStatistics.push(stat_1_temp[k], material_temp_array[k, 1])  # eV
             else
-                RunningStatistics.push(stat_2_intensity[k], material_intensity_array[k, 2])  # erg/cm^2-s
-                RunningStatistics.push(stat_2_temp[k], material_temp_array[k, 2])  # eV
+                @inbounds RunningStatistics.push(stat_2_intensity[k], material_intensity_array[k, 2])  # erg/cm^2-s
+                @inbounds RunningStatistics.push(stat_2_temp[k], material_temp_array[k, 2])  # eV
             end
         end
 
-        iteration_number += 1
+        @fastmath iteration_number += 1
 
-        if (iteration_number % num_say == 0)
+        if @fastmath(iteration_number % num_say == 0)
             println(string("Realization Number ", iteration_number))
         end
 
-        if (iteration_number > max_iterations)
+        if @fastmath(iteration_number > max_iterations)
             cont_calc_outer = false
         end
     end

@@ -144,6 +144,7 @@ module MeshMap
     end
 
     function material_calc(unstructured::Vector{Float64}, unstruct_delta::Vector{Float64}, unstruct_size::Int64, materials::Vector{Int32}, struct_delta::Float64, struct_size::Int64, num_materials::Int32)::Array{Float64, 2}
+        set_zero_subnormals(true)
         # Create the new structured array map
         local material_struct::Array{Float64, 2} = zeros(Float64, struct_size, num_materials)
         for k::Int32 = 1:num_materials
@@ -168,9 +169,9 @@ module MeshMap
                 @fastmath struct_distance_tally += struct_delta  # s
 
                 # Carry over leftover distance
-                if (leftover_distance > 0.0)
+                if @fastmath(leftover_distance > 0.0)
                     # If leftover distance is still over-reaching tally boundaries
-                    if ((distance_tally + leftover_distance) >= struct_distance_tally)
+                    if @fastmath((distance_tally + leftover_distance) >= struct_distance_tally)
                         delta = struct_delta  # s
                         leftover_distance = @fastmath unstruct_distance_tally - struct_distance_tally  # s
                         distance_overlap = true
@@ -182,27 +183,27 @@ module MeshMap
                     @fastmath distance_tally += delta  # s
                 end
 
-                while ((!distance_overlap) && (counter < unstruct_size))
+                while @fastmath((!distance_overlap) && (counter < unstruct_size))
                     # Increment counter (unstructured index)
-                    counter += 1
+                    @fastmath counter += 1
                     # Increment unstructured distance tally
                     @fastmath @inbounds unstruct_distance_tally += unstruct_delta[counter]  # s
 
                     # Material number for calculations
                     # Tally switch for each material
-                    if (materials[counter] == k)
+                    if @inbounds @fastmath(materials[counter] == k)
                         switch = 1.0
                     else
                         switch = 0.0
                     end
 
                     # Check for boundary overlap
-                    if ((unstruct_distance_tally >= struct_distance_tally) || (counter == unstruct_size))
+                    if @fastmath((unstruct_distance_tally >= struct_distance_tally) || (counter == unstruct_size))
                         delta = @fastmath struct_distance_tally - distance_tally  # s
                         leftover_distance = @fastmath unstruct_distance_tally - struct_distance_tally  # s
                         distance_overlap = true
                     else
-                        delta = unstruct_delta[counter]  # s
+                        @inbounds delta = unstruct_delta[counter]  # s
                     end
 
                     # Increment the known distance tally

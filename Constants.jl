@@ -6,7 +6,7 @@ global const num_t_hist = convert(Int64, 1e5)
 global const num_divs = convert(Int64, 1e3)
 global const num_divs_hist = convert(Int64, 1e3)
 global const max_iterations = convert(Int64, 1e4)
-global const max_iterations_hist = convert(Int64, 1e5)
+global const max_iterations_hist = convert(Int64, 1e6)
 
 # Initial conditions
 global const init_intensity = 1e0  # erg/cm^2-s

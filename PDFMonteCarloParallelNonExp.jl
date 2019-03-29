@@ -11,6 +11,8 @@ using Future
 include("Constants.jl")
 
 function main()::Nothing
+    set_zero_subnormals(true)
+
     # Read previous data to explicitly create binned elements
     # The Monte Carlo data is read, because it is the faster computation method
     # (in comparison to realization generation)
@@ -43,12 +45,12 @@ function main()::Nothing
         return nothing
     end
 
-    local intensity_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
-    local intensity_2_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
-    local temperature_1_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
-    local temperature_2_ss::Int64 = PDFFunctions.locate_steady_state(vec([old_data.temperature2...]))
+    local intensity_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
+    local intensity_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
+    local temperature_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
+    local temperature_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature2...]))
 
-    local steady_state_index::Int64 = max(intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss)
+    local steady_state_index::Int64 = @fastmath max(intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss)
     local steady_state_time::Float64 = old_data.time[steady_state_index]
 
     println("Steady state index found to occur at point ", steady_state_index, ", time=", steady_state_time, " ct")
@@ -82,10 +84,10 @@ function main()::Nothing
         PhysicsFunctions.sigma_a(opacity_2, temperature_2_min);
         PhysicsFunctions.sigma_a(opacity_2, temperature_2_max)
     ]
-    local opacity_1_min::Float64 = minimum(opacity_1_op)
-    local opacity_1_max::Float64 = maximum(opacity_1_op)
-    local opacity_2_min::Float64 = minimum(opacity_2_op)
-    local opacity_2_max::Float64 = maximum(opacity_2_op)
+    local opacity_1_min::Float64 = @fastmath minimum(opacity_1_op)
+    local opacity_1_max::Float64 = @fastmath maximum(opacity_1_op)
+    local opacity_2_min::Float64 = @fastmath minimum(opacity_2_op)
+    local opacity_2_max::Float64 = @fastmath maximum(opacity_2_op)
 
     # Arrays for binning
     local intensity_1_bin::Vector{Histogram.Hist} = [Histogram.Hist(num_bins, intensity_1_min, intensity_1_max) for i in 1:nthreads()]
@@ -99,18 +101,18 @@ function main()::Nothing
 
     # Iteration condition
     local gen_array::Array{MersenneTwister, 1} = let m::MersenneTwister = MersenneTwister(1234)
-        [m; accumulate(Future.randjump, fill(big(10)^20, nthreads() - 1), init=m)]
+        @fastmath [m; accumulate(Future.randjump, fill(big(10)^20, nthreads() - 1), init=m)]
     end
 
     # Computational values
-    local new_delta_t::Float64 = (steady_state_time / sol) / num_t_hist
-    local times::Vector{Float64} = [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
+    local new_delta_t::Float64 = @fastmath (steady_state_time / sol) / num_t_hist
+    local times::Vector{Float64} = @fastmath [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
     # Probability for material sampling
-    local prob_1::Float64 = chord_1 / (chord_1 + chord_2)
-    local change_prob_1::Float64 = 1.0 / chord_1 * delta_t
-    local change_prob_2::Float64 = 1.0 / chord_2 * delta_t
-    if ((change_prob_1 > 1.0) || (change_prob_2 > 1.0))
+    local prob_1::Float64 = @fastmath chord_1 / (chord_1 + chord_2)
+    local change_prob_1::Float64 = @fastmath 1.0 / chord_1 * delta_t
+    local change_prob_2::Float64 = @fastmath 1.0 / chord_2 * delta_t
+    if @fastmath((change_prob_1 > 1.0) || (change_prob_2 > 1.0))
         println("The value for delta_t is too large for sampling")
         return nothing
     end
@@ -126,17 +128,17 @@ function main()::Nothing
         # First loop uses initial conditions
         local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
         # Sample initial starting material
-        rand_num = rand(gen_array[threadid()], Float64)
-        local material_num::Int32 = (rand_num < prob_1) ? 1 : 2
+        @inbounds rand_num = @fastmath rand(gen_array[threadid()], Float64)
+        local material_num::Int32 = @fastmath (rand_num < prob_1) ? 1 : 2
 
         # Innter loop
         for (index, time) in enumerate(times)
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
+            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
 
             # Sample whether material changes
-            rand_num = rand(gen_array[threadid()], Float64)
+            @inbounds rand_num = @fastmath rand(gen_array[threadid()], Float64)
 
-            if (rand_num > change_prob)
+            if @fastmath(rand_num > change_prob)
                 local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, temp_value)
                 local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, temp_value)
 
@@ -147,23 +149,23 @@ function main()::Nothing
 
                 local (intensity_bin_no::Int64, temp_bin_no::Int64)
             else
-                material_num = (material_num == 1) ? 2 : 1
-            end
-
-            # Tally histogram data
-            if (material_num == 1)
-                Histogram.push(intensity_1_bin[threadid()], intensity_value)
-                Histogram.push(temperature_1_bin[threadid()], temp_value)
-                Histogram.push(opacity_1_bin[threadid()], PhysicsFunctions.sigma_a(opacity_1, temp_value))
-            else
-                Histogram.push(intensity_2_bin[threadid()], intensity_value)
-                Histogram.push(temperature_2_bin[threadid()], temp_value)
-                Histogram.push(opacity_2_bin[threadid()], PhysicsFunctions.sigma_a(opacity_2, temp_value))
+                material_num = @fastmath (material_num == 1) ? 2 : 1
             end
         end
 
+        # Tally histogram data
+        if @fastmath(material_num == 1)
+            @inbounds Histogram.push(intensity_1_bin[threadid()], intensity_value)
+            @inbounds Histogram.push(temperature_1_bin[threadid()], temp_value)
+            @inbounds Histogram.push(opacity_1_bin[threadid()], PhysicsFunctions.sigma_a(opacity_1, temp_value))
+        else
+            @inbounds Histogram.push(intensity_2_bin[threadid()], intensity_value)
+            @inbounds Histogram.push(temperature_2_bin[threadid()], temp_value)
+            @inbounds Histogram.push(opacity_2_bin[threadid()], PhysicsFunctions.sigma_a(opacity_2, temp_value))
+        end
+
         # Need to reference Core namespace for thread-safe printing
-        if (i % num_say_hist == 0)
+        if @fastmath(i % num_say_hist == 0)
             lock(printlock) do
                 Core.println("History Number ", i)
             end
@@ -176,30 +178,30 @@ function main()::Nothing
     local material_2_temperature_bin::Vector{Float64} = zeros(num_bins + 1)
     local material_1_opacity_bin::Vector{Float64} = zeros(num_bins + 1)
     local material_2_opacity_bin::Vector{Float64} = zeros(num_bins + 1)
-    for i in 1:nthreads()
-        material_1_intensity_bin += Histogram.histogram(intensity_1_bin[i])
-        material_2_intensity_bin += Histogram.histogram(intensity_2_bin[i])
-        material_1_temperature_bin += Histogram.histogram(temperature_1_bin[i])
-        material_2_temperature_bin += Histogram.histogram(temperature_2_bin[i])
-        material_1_opacity_bin += Histogram.histogram(opacity_1_bin[i])
-        material_2_opacity_bin += Histogram.histogram(opacity_2_bin[i])
+    @simd for i in 1:nthreads()
+        @inbounds @fastmath material_1_intensity_bin += Histogram.histogram(intensity_1_bin[i])
+        @inbounds @fastmath material_2_intensity_bin += Histogram.histogram(intensity_2_bin[i])
+        @inbounds @fastmath material_1_temperature_bin += Histogram.histogram(temperature_1_bin[i])
+        @inbounds @fastmath material_2_temperature_bin += Histogram.histogram(temperature_2_bin[i])
+        @inbounds @fastmath material_1_opacity_bin += Histogram.histogram(opacity_1_bin[i])
+        @inbounds @fastmath material_2_opacity_bin += Histogram.histogram(opacity_2_bin[i])
     end
 
     # Normalize histograms
-    material_1_intensity_bin ./= sum(material_1_intensity_bin)
-    material_2_intensity_bin ./= sum(material_2_intensity_bin)
-    material_1_temperature_bin ./= sum(material_1_temperature_bin)
-    material_2_temperature_bin ./= sum(material_2_temperature_bin)
-    material_1_opacity_bin ./= sum(material_1_opacity_bin)
-    material_2_opacity_bin ./= sum(material_2_opacity_bin)
+    @fastmath material_1_intensity_bin ./= sum(material_1_intensity_bin)
+    @fastmath material_2_intensity_bin ./= sum(material_2_intensity_bin)
+    @fastmath material_1_temperature_bin ./= sum(material_1_temperature_bin)
+    @fastmath material_2_temperature_bin ./= sum(material_2_temperature_bin)
+    @fastmath material_1_opacity_bin ./= sum(material_1_opacity_bin)
+    @fastmath material_2_opacity_bin ./= sum(material_2_opacity_bin)
 
     # The distribution can be computed from the first array point
-    local material_1_intensity_array::Vector{Float64} = Histogram.distribution(intensity_1_bin[1])
-    local material_2_intensity_array::Vector{Float64} = Histogram.distribution(intensity_2_bin[1])
-    local material_1_temperature_array::Vector{Float64} = Histogram.distribution(temperature_1_bin[1])
-    local material_2_temperature_array::Vector{Float64} = Histogram.distribution(temperature_2_bin[1])
-    local material_1_opacity_array::Vector{Float64} = Histogram.distribution(opacity_1_bin[1])
-    local material_2_opacity_array::Vector{Float64} = Histogram.distribution(opacity_2_bin[1])
+    local material_1_intensity_array::Vector{Float64} = @inbounds Histogram.distribution(intensity_1_bin[1])
+    local material_2_intensity_array::Vector{Float64} = @inbounds Histogram.distribution(intensity_2_bin[1])
+    local material_1_temperature_array::Vector{Float64} = @inbounds Histogram.distribution(temperature_1_bin[1])
+    local material_2_temperature_array::Vector{Float64} = @inbounds Histogram.distribution(temperature_2_bin[1])
+    local material_1_opacity_array::Vector{Float64} = @inbounds Histogram.distribution(opacity_1_bin[1])
+    local material_2_opacity_array::Vector{Float64} = @inbounds Histogram.distribution(opacity_2_bin[1])
 
     # Time (constant array in csv)
     local time_array::Vector{Float64} = fill(steady_state_time, num_bins + 1)
