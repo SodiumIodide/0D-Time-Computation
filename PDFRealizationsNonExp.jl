@@ -57,15 +57,21 @@ function main()::Nothing
     println("Steady state index found to occur at point ", steady_state_index, ", time=", steady_state_time, " ct")
 
     local chosenindex::Int64
+    local chosentime::Float64
     println("Select data point to create histograms...")
     println("[1] Steady State -DEFAULT-")
     println("[2] Early Time-Step")
     local timestepselect::String = chomp(readline())
     if (occursin("2", timestepselect))
-        chosenindex = 3
+        chosenindex = hist_early_index
+        chosentime = old_data.time[chosenindex]
     else
         chosenindex = steady_state_index
+        chosentime = steady_state_time
     end
+
+    # Time (constant array in csv)
+    local time_array::Vector{Float64} = fill(chosentime, num_bins + 1)
 
     # Bounds for binning
     local intensity_1_min::Float64 = old_data.minintensity1[chosenindex]
@@ -106,7 +112,7 @@ function main()::Nothing
 
     # Computational values
     local iteration_number::Int64 = 0
-    local new_end_time::Float64 = @fastmath steady_state_time / sol
+    local new_end_time::Float64 = @fastmath chosentime / sol
     local new_delta_t::Float64 = @fastmath new_end_time / num_t_hist
     local times::Vector{Float64} = @fastmath [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
@@ -140,13 +146,13 @@ function main()::Nothing
 
                 local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
-                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value)
                     @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
                 ]
 
                 local delta::Vector{Float64} = @inbounds @fastmath jacobian \ - func_vector
 
-                new_terms = @fastmath delta + old_terms
+                @inbounds new_terms = @fastmath delta + old_terms
                 old_terms = new_terms
 
                 error = PhysicsFunctions.relative_change(delta, original_terms)
@@ -197,9 +203,6 @@ function main()::Nothing
     local material_2_temperature_array::Vector{Float64} = Histogram.distribution(temperature_2_bin)
     local material_1_opacity_array::Vector{Float64} = Histogram.distribution(opacity_1_bin)
     local material_2_opacity_array::Vector{Float64} = Histogram.distribution(opacity_2_bin)
-
-    # Time (constant array in csv)
-    local time_array::Vector{Float64} = fill(steady_state_time, num_bins + 1)
 
     local tabular::DataFrame = DataFrame(time=time_array, intensity1arr=material_1_intensity_array, freqintensity1=material_1_intensity_bin, intensity2arr=material_2_intensity_array, freqintensity2=material_2_intensity_bin, temperature1arr=material_1_temperature_array, freqtemperature1=material_1_temperature_bin, temperature2arr=material_2_temperature_array, freqtemperature2=material_2_temperature_bin, opacity1arr=material_1_opacity_array, freqopacity1=material_1_opacity_bin, opacity2arr=material_2_opacity_array, freqopacity2=material_2_opacity_bin)
 

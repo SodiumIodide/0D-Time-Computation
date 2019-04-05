@@ -56,15 +56,21 @@ function main()::Nothing
     println("Steady state index found to occur at point ", steady_state_index, ", time=", steady_state_time, " ct")
 
     local chosenindex::Int64
+    local chosentime::Float64
     println("Select data point to create histograms...")
     println("[1] Steady State -DEFAULT-")
     println("[2] Early Time-Step")
     local timestepselect::String = chomp(readline())
     if (occursin("2", timestepselect))
-        chosenindex = 3
+        chosenindex = hist_early_index
+        chosentime = old_data.time[chosenindex]
     else
         chosenindex = steady_state_index
+        chosentime = steady_state_time
     end
+
+    # Time (constant array in csv)
+    local time_array::Vector{Float64} = fill(chosentime, num_bins + 1)
 
     # Bounds for binning
     local intensity_1_min::Float64 = old_data.minintensity1[chosenindex]
@@ -105,7 +111,7 @@ function main()::Nothing
     end
 
     # Computational values
-    local new_delta_t::Float64 = @fastmath (steady_state_time / sol) / num_t_hist
+    local new_delta_t::Float64 = @fastmath (chosentime / sol) / num_t_hist
     local times::Vector{Float64} = @fastmath [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
     # Probability for material sampling
@@ -202,9 +208,6 @@ function main()::Nothing
     local material_2_temperature_array::Vector{Float64} = @inbounds Histogram.distribution(temperature_2_bin[1])
     local material_1_opacity_array::Vector{Float64} = @inbounds Histogram.distribution(opacity_1_bin[1])
     local material_2_opacity_array::Vector{Float64} = @inbounds Histogram.distribution(opacity_2_bin[1])
-
-    # Time (constant array in csv)
-    local time_array::Vector{Float64} = fill(steady_state_time, num_bins + 1)
 
     local tabular::DataFrame = DataFrame(time=time_array, intensity1arr=material_1_intensity_array, freqintensity1=material_1_intensity_bin, intensity2arr=material_2_intensity_array, freqintensity2=material_2_intensity_bin, temperature1arr=material_1_temperature_array, freqtemperature1=material_1_temperature_bin, temperature2arr=material_2_temperature_array, freqtemperature2=material_2_temperature_bin, opacity1arr=material_1_opacity_array, freqopacity1=material_1_opacity_bin, opacity2arr=material_2_opacity_array, freqopacity2=material_2_opacity_bin)
 

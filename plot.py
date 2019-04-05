@@ -717,9 +717,11 @@ def main():
         plt.clf()
 
     if re_hist:
+        time_ss = re_hist_data['time'][0]
+
         # Intensity Material 1
-        plt.plot(re_hist_data['intensity1arr'], re_hist_data['freqintensity1'])
-        plt.title("Intensity 1 Histogram - Realizations")
+        plt.plot(re_hist_data['intensity1arr'][1:len(re_hist_data['intensity1arr'])-1], re_hist_data['freqintensity1'][1:len(re_hist_data['freqopacity2'])-1])
+        plt.title("Intensity 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Intensity (erg/cm^2-s)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -731,8 +733,8 @@ def main():
         plt.clf()
 
         # Intensity Material 2
-        plt.plot(re_hist_data['intensity2arr'], re_hist_data['freqintensity2'])
-        plt.title("Intensity 2 Histogram - Realizations")
+        plt.plot(re_hist_data['intensity2arr'][1:len(re_hist_data['intensity2arr'])-1], re_hist_data['freqintensity2'][1:len(re_hist_data['freqintensity2'])-1])
+        plt.title("Intensity 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Intensity (erg/cm^2-s)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -744,8 +746,8 @@ def main():
         plt.clf()
 
         # Temperature Material 1
-        plt.plot(re_hist_data['temperature1arr'], re_hist_data['freqtemperature1'])
-        plt.title("Temperature 1 Histogram - Realizations")
+        plt.plot(re_hist_data['temperature1arr'][1:len(re_hist_data['temperature1arr'])-1], re_hist_data['freqtemperature1'][1:len(re_hist_data['freqtemperature1'])-1])
+        plt.title("Temperature 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Temperature (eV)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -757,8 +759,8 @@ def main():
         plt.clf()
 
         # Temperature Material 2
-        plt.plot(re_hist_data['temperature2arr'], re_hist_data['freqtemperature2'])
-        plt.title("Temperature 2 Histogram - Realizations")
+        plt.plot(re_hist_data['temperature2arr'][1:len(re_hist_data['temperature2arr'])-1], re_hist_data['freqtemperature2'][1:len(re_hist_data['freqtemperature2'])-1])
+        plt.title("Temperature 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Temperature (eV)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -770,8 +772,8 @@ def main():
         plt.clf()
 
         # Opacity Material 1
-        plt.plot(re_hist_data['opacity1arr'], re_hist_data['freqopacity1'])
-        plt.title("Opacity 1 Histogram - Realizations")
+        plt.plot(re_hist_data['opacity1arr'][1:len(re_hist_data['opacity1arr'])-1], re_hist_data['freqopacity1'][1:len(re_hist_data['freqopacity1'])-1])
+        plt.title("Opacity 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Opacity (cm^-1)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -783,8 +785,8 @@ def main():
         plt.clf()
 
         # Opacity Material 2
-        plt.plot(re_hist_data['opacity2arr'], re_hist_data['freqopacity2'])
-        plt.title("Opacity 2 Histogram - Realizations")
+        plt.plot(re_hist_data['opacity2arr'][1:len(re_hist_data['opacity2arr'])-1], re_hist_data['freqopacity2'][1:len(re_hist_data['freqopacity2'])-1])
+        plt.title("Opacity 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Opacity (cm^-1)")
         plt.ylabel("Frequency")
         #plt.xscale("log")

@@ -6,7 +6,7 @@ global const num_t_hist = convert(Int64, 1e5)
 global const num_divs = convert(Int64, 1e3)
 global const num_divs_hist = convert(Int64, 1e3)
 global const max_iterations = convert(Int64, 1e4)
-global const max_iterations_hist = convert(Int64, 1e6)
+global const max_iterations_hist = convert(Int64, 1e7)
 
 # Initial conditions
 global const init_intensity = 1e0  # erg/cm^2-s
@@ -19,7 +19,10 @@ global const num_say = convert(Int64, 1e3)
 global const num_say_hist = convert(Int64, 1e4)
 
 # Number of bins to produce in PDF
-global const num_bins = convert(Int64, 5e1)
+global const num_bins = convert(Int64, 3e1)
+
+# Histogram early time index number
+global const hist_early_index = 100
 
 # Physics constants
 global const sol = 29979245800.0  # cm/s
