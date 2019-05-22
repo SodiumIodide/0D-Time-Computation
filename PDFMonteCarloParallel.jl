@@ -152,8 +152,6 @@ function main()::Nothing
                 local new_temp_value::Float64 = PhysicsFunctions.balance_temp(opacity, spec_heat, dens, new_delta_t, intensity_value, temp_value)
 
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
-
-                local (intensity_bin_no::Int64, temp_bin_no::Int64)
             else
                 material_num = @fastmath (material_num == 1) ? 2 : 1
             end

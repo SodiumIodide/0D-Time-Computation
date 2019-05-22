@@ -1,5 +1,5 @@
 module RunningStatistics
-    export RunningStat, clear, push, num, mean, variance, standard_deviation
+    export RunningStat, clear, push, num, mean, variance, standard_deviation, least, greatest, threadarray, total, compute_min, compute_max, compute_variance, compute_mean
 
     using Base.Threads
 
@@ -61,7 +61,7 @@ module RunningStatistics
         return @fastmath (r.m_n > 1) ? (r.m_newS / (r.m_n - 1)) : 0.0
     end
 
-    function standard_devation(r::RunningStat)::Float64
+    function standard_deviation(r::RunningStat)::Float64
         set_zero_subnormals(true)
         return @fastmath sqrt(variance(r))
     end

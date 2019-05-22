@@ -145,7 +145,7 @@ function main()::Nothing
 
                 local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
-                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value)
                     @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
                 ]
 
@@ -185,7 +185,7 @@ function main()::Nothing
     local material_2_intensity_bin::Vector{Float64} = ExponentialHist.histogram(intensity_2_bin)
     local material_1_temperature_bin::Vector{Float64} = ExponentialHist.histogram(temperature_1_bin)
     local material_2_temperature_bin::Vector{Float64} = ExponentialHist.histogram(temperature_2_bin)
-    local material_1_opacity_bin::Vector{Float64} = ExpxonentialHist.histogram(opacity_1_bin)
+    local material_1_opacity_bin::Vector{Float64} = ExponentialHist.histogram(opacity_1_bin)
     local material_2_opacity_bin::Vector{Float64} = ExponentialHist.histogram(opacity_2_bin)
 
     # Normalize histograms

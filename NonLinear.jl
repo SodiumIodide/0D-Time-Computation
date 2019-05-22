@@ -58,14 +58,14 @@ function main()::Nothing
 
                 local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
-                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value)
                     @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
                 ]
 
                 local delta::Vector{Float64} = @inbounds @fastmath jacobian \ - func_vector
 
                 @inbounds new_terms = @fastmath delta + old_terms
-                old_terms = new_terms
+                old_terms = deepcopy(new_terms)
 
                 error = PhysicsFunctions.relative_change(delta, original_terms)
             end

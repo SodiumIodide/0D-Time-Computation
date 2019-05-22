@@ -503,7 +503,7 @@ def main():
         plt.clf()
 
     # REALIZATIONS VS MC COMPARISON
-    if exists and h_exists:
+    if exists and mc_exists:
         # Intensity
         plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1 - Realizations")
         plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2 - Realizations")
@@ -634,6 +634,56 @@ def main():
         plt.cla()
         plt.clf()
 
+    # FULL COMPARISON - MONTE CARLO
+    if mc_exists and h_exists and l_exists:
+        # Intensity
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='b', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', label="Material 2 - Monte Carlo")
+        plt.plot(homog_nonlinear['time'], homog_nonlinear['intensity'], color='m', linestyle='--', label="Homogeneous - Nonlinear")
+        plt.plot(linear['time'], linear['intensity1'], color='b', linestyle='-.', label="Material 1 - Linear")
+        plt.plot(linear['time'], linear['intensity2'], color='r', linestyle='-.', label="Material 2 - Linear")
+        plt.plot(nonlinear['time'], mc_nl_lb_intensity_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], mc_nl_ub_intensity_1, color='b', linestyle=':', label=None)
+        plt.fill_between(nonlinear['time'], mc_nl_lb_intensity_1, mc_nl_ub_intensity_1, color='b', alpha=0.5)
+        plt.plot(nonlinear['time'], mc_nl_lb_intensity_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], mc_nl_ub_intensity_2, color='r', linestyle=':', label=None)
+        plt.fill_between(nonlinear['time'], mc_nl_lb_intensity_2, mc_nl_ub_intensity_2, color='r', alpha=0.5)
+        plt.title("Intensity Comparison")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/intensity_full_comp_mc.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='b', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='r', label="Material 2 - Monte Carlo")
+        plt.plot(homog_nonlinear['time'], homog_nonlinear['temperature'], color='g', linestyle='--', label="Homogeneous - Nonlinear")
+        plt.plot(linear['time'], linear['temperature1'], color='b', linestyle='-.', label="Material 1 - Linear")
+        plt.plot(linear['time'], linear['temperature2'], color='r', linestyle='-.', label="Material 2 - Linear")
+        plt.plot(nonlinear['time'], mc_nl_lb_temp_1, color='b', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], mc_nl_ub_temp_1, color='b', linestyle=':', label=None)
+        plt.fill_between(nonlinear['time'], mc_nl_lb_temp_1, mc_nl_ub_temp_1, color='b', alpha=0.5)
+        plt.plot(nonlinear['time'], mc_nl_lb_temp_2, color='r', linestyle=':', label=None)
+        plt.plot(nonlinear['time'], mc_nl_ub_temp_2, color='r', linestyle=':', label=None)
+        plt.fill_between(nonlinear['time'], mc_nl_lb_temp_2, mc_nl_ub_temp_2, color='r', alpha=0.5)
+        plt.title("Temperature Comparison")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/temperature_full_comp_mc.png")
+        plt.cla()
+        plt.clf()
+
     # HISTOGRAM PLOTS
     if mc_hist:
         time_ss = mc_hist_data['time'][0]
@@ -721,7 +771,7 @@ def main():
 
         # Intensity Material 1
         plt.plot(re_hist_data['intensity1arr'][1:len(re_hist_data['intensity1arr'])-1], re_hist_data['freqintensity1'][1:len(re_hist_data['freqopacity2'])-1])
-        plt.title("Intensity 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
+        plt.title(f"Intensity 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Intensity (erg/cm^2-s)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -734,7 +784,7 @@ def main():
 
         # Intensity Material 2
         plt.plot(re_hist_data['intensity2arr'][1:len(re_hist_data['intensity2arr'])-1], re_hist_data['freqintensity2'][1:len(re_hist_data['freqintensity2'])-1])
-        plt.title("Intensity 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
+        plt.title(f"Intensity 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Intensity (erg/cm^2-s)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -747,7 +797,7 @@ def main():
 
         # Temperature Material 1
         plt.plot(re_hist_data['temperature1arr'][1:len(re_hist_data['temperature1arr'])-1], re_hist_data['freqtemperature1'][1:len(re_hist_data['freqtemperature1'])-1])
-        plt.title("Temperature 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
+        plt.title(f"Temperature 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Temperature (eV)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -760,7 +810,7 @@ def main():
 
         # Temperature Material 2
         plt.plot(re_hist_data['temperature2arr'][1:len(re_hist_data['temperature2arr'])-1], re_hist_data['freqtemperature2'][1:len(re_hist_data['freqtemperature2'])-1])
-        plt.title("Temperature 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
+        plt.title(f"Temperature 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Temperature (eV)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -773,7 +823,7 @@ def main():
 
         # Opacity Material 1
         plt.plot(re_hist_data['opacity1arr'][1:len(re_hist_data['opacity1arr'])-1], re_hist_data['freqopacity1'][1:len(re_hist_data['freqopacity1'])-1])
-        plt.title("Opacity 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
+        plt.title(f"Opacity 1 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Opacity (cm^-1)")
         plt.ylabel("Frequency")
         #plt.xscale("log")
@@ -786,7 +836,7 @@ def main():
 
         # Opacity Material 2
         plt.plot(re_hist_data['opacity2arr'][1:len(re_hist_data['opacity2arr'])-1], re_hist_data['freqopacity2'][1:len(re_hist_data['freqopacity2'])-1])
-        plt.title("Opacity 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
+        plt.title(f"Opacity 2 Histogram - Realizations (Time={time_ss:.4E} ct)")
         plt.xlabel("Opacity (cm^-1)")
         plt.ylabel("Frequency")
         #plt.xscale("log")

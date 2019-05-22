@@ -1,0 +1,25 @@
+1000 histories
+
+Realizations
+392.579868 seconds (2.33 G allocations: 205.648 GiB, 10.01% gc time)
+366.643308 seconds (2.33 G allocations: 205.647 GiB, 10.28% gc time)
+360.265749 seconds (2.33 G allocations: 205.648 GiB, 10.41% gc time)
+386.655843 seconds (2.33 G allocations: 205.647 GiB, 10.00% gc time)
+356.774525 seconds (2.33 G allocations: 205.648 GiB, 10.54% gc time)
+358.238720 seconds (2.33 G allocations: 205.647 GiB, 10.51% gc time)
+357.809040 seconds (2.33 G allocations: 205.647 GiB, 10.53% gc time)
+370.713856 seconds (2.33 G allocations: 205.647 GiB, 10.32% gc time)
+358.053397 seconds (2.33 G allocations: 205.647 GiB, 10.60% gc time)
+365.494726 seconds (2.33 G allocations: 205.647 GiB, 10.45% gc time)
+
+Monte Carlo
+  5.469992 seconds (4.05 M allocations: 212.449 MiB, 1.13% gc time)
+  5.180969 seconds (4.05 M allocations: 212.948 MiB, 3.32% gc time)
+  5.192668 seconds (4.05 M allocations: 212.644 MiB, 4.64% gc time)
+  5.662284 seconds (4.05 M allocations: 212.571 MiB, 1.31% gc time)
+  4.997953 seconds (4.05 M allocations: 212.467 MiB, 3.31% gc time)
+  5.080183 seconds (4.05 M allocations: 212.575 MiB, 2.99% gc time)
+  5.032004 seconds (4.05 M allocations: 212.465 MiB, 1.37% gc time)
+  5.214927 seconds (4.05 M allocations: 212.904 MiB, 4.30% gc time)
+  4.908613 seconds (4.05 M allocations: 212.567 MiB, 1.34% gc time)
+  4.563295 seconds (4.05 M allocations: 212.438 MiB, 3.03% gc time)

@@ -155,7 +155,7 @@ function main()::Nothing
 
                 local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
-                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value),
+                    @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value)
                     @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
                 ]
 
@@ -196,7 +196,7 @@ function main()::Nothing
     local material_2_opacity_bin::Vector{Float64} = zeros(num_bins + 1)
     @simd for i in 1:nthreads()
         @inbounds @fastmath material_1_intensity_bin += Histogram.histogram(intensity_1_bin[i])
-        @inbounds @fastmath material_2_intensity_bin += Hisstogram.histogram(intensity_2_bin[i])
+        @inbounds @fastmath material_2_intensity_bin += Histogram.histogram(intensity_2_bin[i])
         @inbounds @fastmath material_1_temperature_bin += Histogram.histogram(temperature_1_bin[i])
         @inbounds @fastmath material_2_temperature_bin += Histogram.histogram(temperature_2_bin[i])
         @inbounds @fastmath material_1_opacity_bin += Histogram.histogram(opacity_1_bin[i])
