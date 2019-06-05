@@ -15,6 +15,7 @@ global const init_temp = 1e0  # eV
 # Iteration condition
 #global const tolerance = convert(Float64, eps(Float32))
 global const tolerance = 1e-3
+global const heur_tolerance = 1e-6
 global const num_say = convert(Int64, 1e3)
 global const num_say_hist = convert(Int64, 1e4)
 

@@ -13,7 +13,7 @@ HISTPATH = f"{PLOTPATH}/pdf_data"
 
 def main():
     '''Main function'''
-    h_exists, he_exists, exists, ex_exists, l_exists, mc_exists, mc_hist, re_hist = True, True, True, True, True, True, True, True
+    h_exists, he_exists, exists, ex_exists, l_exists, mc_exists, mc_hist, re_hist, heur_exists = True, True, True, True, True, True, True, True, True
     #time,intensity,temperature
     try:
         homog_nonlinear = pandas.read_csv(f"{CSVPATH}/homog_nonlinear.csv")
@@ -54,6 +54,10 @@ def main():
         re_hist_data = pandas.read_csv(f"{HISTPATH}/realizations_pdf.csv")
     except FileNotFoundError:
         re_hist = False
+    try:
+        heur_data = pandas.read_csv(f"{CSVPATH}/heuristic.csv")
+    except FileNotFoundError:
+        heur_exists = False
 
     # IMPLICIT PLOTS
     if h_exists:
@@ -201,6 +205,80 @@ def main():
         plt.cla()
         plt.clf()
 
+    # REALIZATIONS VS HEURISTIC MODEL
+    if exists and heur_exists:
+        # Intensity
+        plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1 - Realizations")
+        plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2 - Realizations")
+        plt.plot(heur_data['time'], heur_data['intensity1'], color='c', linestyle=':', label="Material 1 - Heuristic")
+        plt.plot(heur_data['time'], heur_data['intensity2'], color='m', linestyle=':', label="Material 2 - Heuristic")
+        plt.title("Intensity - Realizations vs. Heuristic")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intenisty (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/heur_real_intensity.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear['time'], nonlinear['temperature1'], color='b', label="Material 1 - Realizations")
+        plt.plot(nonlinear['time'], nonlinear['temperature2'], color='r', label="Material 2 - Realizations")
+        plt.plot(heur_data['time'], heur_data['temperature1'], color='c', linestyle=':', label="Material 1 - Heuristic")
+        plt.plot(heur_data['time'], heur_data['temperature2'], color='m', linestyle=':', label="Material 2 - Heuristic")
+        plt.title("Temperature - Realizations vs. Heuristic")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Temperature (eV)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/heur_real_temperature.png")
+        plt.cla()
+        plt.clf()
+
+        # Compute relative error
+        if len(nonlinear['time']) == len(heur_data['time']):
+            intensity_1_err = np.zeros(len(nonlinear['time']))
+            intensity_2_err = np.zeros(len(nonlinear['time']))
+            temp_1_err = np.zeros(len(nonlinear['time']))
+            temp_2_err = np.zeros(len(nonlinear['time']))
+            for index, _ in enumerate(nonlinear['time']):
+                intensity_1_err[index] = np.abs(nonlinear['intensity1'][index] - heur_data['intensity1'][index]) / nonlinear['intensity1'][index]
+                intensity_2_err[index] = np.abs(nonlinear['intensity2'][index] - heur_data['intensity2'][index]) / nonlinear['intensity1'][index]
+                temp_1_err[index] = np.abs(nonlinear['temperature1'][index] - heur_data['temperature1'][index]) / nonlinear['temperature1'][index]
+                temp_2_err[index] = np.abs(nonlinear['temperature2'][index] - heur_data['temperature2'][index]) / nonlinear['temperature2'][index]
+            plt.plot(nonlinear['time'], intensity_1_err, label="Intensity 1")
+            plt.plot(nonlinear['time'], intensity_2_err, label="Intensity 2")
+            plt.plot(nonlinear['time'], temp_1_err, label="Temperature 1")
+            plt.plot(nonlinear['time'], temp_2_err, label="Temperature 2")
+            plt.title("Relative Error - Realizations vs. Heuristic")
+            plt.xlabel("Time - ct (cm)")
+            plt.ylabel("Relative Error")
+            plt.xscale("log")
+            plt.yscale("log")
+            plt.grid(b=True, which="both", axis="both")
+            plt.legend(loc="best")
+            plt.tight_layout()
+            plt.savefig(f"{PLOTPATH}/heur_real_rel_error.png")
+            plt.cla()
+            plt.clf()
+
+            print("Realizations vs. Heuristic:")
+            print(f"Intensity 1 - Mean Relative Error = {np.mean(intensity_1_err)}")
+            print(f"Intensity 1 - Max Relative Error = {np.max(intensity_1_err)}")
+            print(f"Intensity 2 - Mean Relative Error = {np.mean(intensity_2_err)}")
+            print(f"Intensity 2 - Max Relative Error = {np.max(intensity_2_err)}")
+            print(f"Temperature 1 - Mean Relative Error = {np.mean(temp_1_err)}")
+            print(f"Temperature 1 - Max Relative Error = {np.max(temp_1_err)}")
+            print(f"Temperature 2 - Mean Relative Error = {np.mean(temp_2_err)}")
+            print(f"Temperature 2 - Max Relative Error = {np.max(temp_2_err)}")
+            print("\n")
+
     # REALIZATIONS EXPLICIT PLOTS
     if ex_exists:
         # Standard deviation computing
@@ -316,6 +394,80 @@ def main():
         plt.savefig(f"{PLOTPATH}/temperature_mc.png")
         plt.cla()
         plt.clf()
+
+    # MONTE CARLO VS HEURISTIC MODEL
+    if exists and heur_exists:
+        # Intensity
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='b', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', label="Material 2 - Monte Carlo")
+        plt.plot(heur_data['time'], heur_data['intensity1'], color='c', linestyle=':', label="Material 1 - Heuristic")
+        plt.plot(heur_data['time'], heur_data['intensity2'], color='m', linestyle=':', label="Material 2 - Heuristic")
+        plt.title("Intensity - Monte Carlo vs. Heuristic")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Intenisty (erg/cm^2-s)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/heur_mc_intensity.png")
+        plt.cla()
+        plt.clf()
+
+        # Temperature
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='b', label="Material 1 - Monte Carlo")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='r', label="Material 2 - Monte Carlo")
+        plt.plot(heur_data['time'], heur_data['temperature1'], color='c', linestyle=':', label="Material 1 - Heuristic")
+        plt.plot(heur_data['time'], heur_data['temperature2'], color='m', linestyle=':', label="Material 2 - Heuristic")
+        plt.title("Temperature - Monte Carlo vs. Heuristic")
+        plt.xlabel("Time - ct (cm)")
+        plt.ylabel("Temperature (eV)")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.grid(b=True, which="both", axis="both")
+        plt.legend(loc="best")
+        plt.tight_layout()
+        plt.savefig(f"{PLOTPATH}/heur_mc_temperature.png")
+        plt.cla()
+        plt.clf()
+
+        # Compute relative error
+        if len(nonlinear_mc['time']) == len(heur_data['time']):
+            intensity_1_err = np.zeros(len(nonlinear_mc['time']))
+            intensity_2_err = np.zeros(len(nonlinear_mc['time']))
+            temp_1_err = np.zeros(len(nonlinear_mc['time']))
+            temp_2_err = np.zeros(len(nonlinear_mc['time']))
+            for index, _ in enumerate(nonlinear_mc['time']):
+                intensity_1_err[index] = np.abs(nonlinear_mc['intensity1'][index] - heur_data['intensity1'][index]) / nonlinear_mc['intensity1'][index]
+                intensity_2_err[index] = np.abs(nonlinear_mc['intensity2'][index] - heur_data['intensity2'][index]) / nonlinear_mc['intensity1'][index]
+                temp_1_err[index] = np.abs(nonlinear_mc['temperature1'][index] - heur_data['temperature1'][index]) / nonlinear_mc['temperature1'][index]
+                temp_2_err[index] = np.abs(nonlinear_mc['temperature2'][index] - heur_data['temperature2'][index]) / nonlinear_mc['temperature2'][index]
+            plt.plot(nonlinear['time'], intensity_1_err, label="Intensity 1")
+            plt.plot(nonlinear['time'], intensity_2_err, label="Intensity 2")
+            plt.plot(nonlinear['time'], temp_1_err, label="Temperature 1")
+            plt.plot(nonlinear['time'], temp_2_err, label="Temperature 2")
+            plt.title("Relative Error - Monte Carlo vs. Heuristic")
+            plt.xlabel("Time - ct (cm)")
+            plt.ylabel("Relative Error")
+            plt.xscale("log")
+            plt.yscale("log")
+            plt.grid(b=True, which="both", axis="both")
+            plt.legend(loc="best")
+            plt.tight_layout()
+            plt.savefig(f"{PLOTPATH}/heur_mc_rel_error.png")
+            plt.cla()
+            plt.clf()
+
+            print("Monte Carlo vs. Heuristic:")
+            print(f"Intensity 1 - Mean Relative Error = {np.mean(intensity_1_err)}")
+            print(f"Intensity 1 - Max Relative Error = {np.max(intensity_1_err)}")
+            print(f"Intensity 2 - Mean Relative Error = {np.mean(intensity_2_err)}")
+            print(f"Intensity 2 - Max Relative Error = {np.max(intensity_2_err)}")
+            print(f"Temperature 1 - Mean Relative Error = {np.mean(temp_1_err)}")
+            print(f"Temperature 1 - Max Relative Error = {np.max(temp_1_err)}")
+            print(f"Temperature 2 - Mean Relative Error = {np.mean(temp_2_err)}")
+            print(f"Temperature 2 - Max Relative Error = {np.max(temp_2_err)}")
+            print("\n")
 
     if exists and mc_exists:
         # Intensity

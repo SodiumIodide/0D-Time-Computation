@@ -1,0 +1,20 @@
+Realizations vs. Heuristic:
+Intensity 1 - Mean Relative Error = 0.0031432053169020567
+Intensity 1 - Max Relative Error = 0.46775362161820655
+Intensity 2 - Mean Relative Error = 0.0002102317951335181
+Intensity 2 - Max Relative Error = 5.687192034603284
+Temperature 1 - Mean Relative Error = 0.003137346604465268
+Temperature 1 - Max Relative Error = 0.02601029396663018
+Temperature 2 - Mean Relative Error = 0.00016022506288167825
+Temperature 2 - Max Relative Error = 0.023134463942210765
+
+
+Monte Carlo vs. Heuristic:
+Intensity 1 - Mean Relative Error = 0.00015610535491502052
+Intensity 1 - Max Relative Error = 0.023667817338487034
+Intensity 2 - Mean Relative Error = 8.972017816850385e-05
+Intensity 2 - Max Relative Error = 0.01271589616768227
+Temperature 1 - Mean Relative Error = 0.00024676353084882523
+Temperature 1 - Max Relative Error = 0.028533642516752267
+Temperature 2 - Mean Relative Error = 0.00015567236705195104
+Temperature 2 - Max Relative Error = 0.023419222750237764
