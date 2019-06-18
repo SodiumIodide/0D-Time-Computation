@@ -3,10 +3,12 @@
 # Histogram and problem parameters
 global const num_t = convert(Int64, 1e5)
 global const num_t_hist = convert(Int64, 1e5)
-global const num_divs = convert(Int64, 1e3)
-global const num_divs_hist = convert(Int64, 1e3)
-global const max_iterations = convert(Int64, 1e5)
-global const max_iterations_hist = convert(Int64, 1e7)
+global const num_divs = convert(Int64, 1e1)
+global const num_divs_hist = convert(Int64, 1e1)
+global const max_iterations = convert(Int64, 1e4)
+global const max_iterations_hist = convert(Int64, 1e6)
+
+global const ss_fix_time = 1e0  # ct = cm
 
 # Initial conditions
 global const init_intensity = 1e0  # erg/cm^2-s
@@ -36,12 +38,12 @@ global const t_init = 0.0  # s
 global const delta_t = (t_max - t_init) / num_t  # s
 global const chord_1 = 1e-3 / sol  # s
 global const chord_2 = 5e-3 / sol  # s
-global const dens_1 = 1.0  # g/cm^3
-global const dens_2 = 1.0  # g/cm^3
+global const dens_1 = 1e0  # g/cm^3
+global const dens_2 = 1e0  # g/cm^3
 global const opacity_1 = 1.0  # cm^-1
 global const opacity_2 = 5.0  # cm^-1
-global const spec_heat_1 = 1.0  # erg/g-eV
-global const spec_heat_2 = 1.0  # erg/g-eV
+global const spec_heat_1 = 1e0  # erg/g-eV
+global const spec_heat_2 = 1e0  # erg/g-eV
 global const volfrac_1 = chord_1 / (chord_1 + chord_2)
 global const volfrac_2 = 1.0 - volfrac_1
 

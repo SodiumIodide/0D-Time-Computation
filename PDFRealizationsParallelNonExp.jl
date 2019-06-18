@@ -137,7 +137,7 @@ function main()::Nothing
         for index = 1:num_cells
             material_num = materials[index]
             local delta_t_unstruct::Float64 = @inbounds t_delta[index]
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
+            local (opacity_term::Float64, spec_heat_term::Float64, dens_term::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
 
             local original_terms::Vector{Float64} = [
                 intensity_value,
@@ -152,6 +152,7 @@ function main()::Nothing
             while @fastmath(error >= tolerance)
                 local opacity::Float64 = @inbounds PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
                 local spec_heat::Float64 = @inbounds PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
+                local dens::Float64 = @inbounds PhysicsFunctions.rho(dens_term, old_terms[2])
 
                 local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [

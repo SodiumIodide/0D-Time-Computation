@@ -22,7 +22,7 @@ module ExponentialHist
         set_zero_subnormals(true)
         local number::Int64 = @fastmath convert(Int64, (floor((value + delta / 2.0 - d_minimum) / delta))) + 1
 
-        # Fit into pre-determined number of gins: excess in either direction is assumed to be maximum or minimum
+        # Fit into pre-determined number of bins: excess in either direction is assumed to be maximum or minimum
         number = @fastmath (number < 1) ? 0 : number
         number = @fastmath (number > (num_bins + 1)) ? 0 : number
 

@@ -45,13 +45,16 @@ function main()::Nothing
             local sigma_a_2::Float64 = @inbounds PhysicsFunctions.sigma_a(opacity_2, old_terms[4])
             local c_v_1::Float64 = @inbounds PhysicsFunctions.c_v(spec_heat_1, old_terms[3])
             local c_v_2::Float64 = @inbounds PhysicsFunctions.c_v(spec_heat_2, old_terms[4])
+            local rho_1::Float64 = @inbounds PhysicsFunctions.rho(dens_1, old_terms[3])
+            local rho_2::Float64 = @inbounds PhysicsFunctions.rho(dens_2, old_terms[4])
 
-            local jacobian::Array{Float64, 2} = PhysicsFunctions.make_jacobian_heuristic(old_terms...)
+            #local jacobian::Array{Float64, 2} = PhysicsFunctions.make_jacobian_heuristic(old_terms...)
+            local jacobian::Array{Float64, 2} = PhysicsFunctions.complex_step_jacobian_heuristic(old_terms...)
             local func_vector::Vector{Float64} = vec([
-                @inbounds PhysicsFunctions.balance_f1(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, intensity_value_1)
-                @inbounds PhysicsFunctions.balance_f2(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, intensity_value_2)
-                @inbounds PhysicsFunctions.balance_g1(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, temp_value_1)
-                @inbounds PhysicsFunctions.balance_g2(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, temp_value_2)
+                @inbounds PhysicsFunctions.balance_f1(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, rho_1, rho_2, intensity_value_1)
+                @inbounds PhysicsFunctions.balance_f2(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, rho_1, rho_2, intensity_value_2)
+                @inbounds PhysicsFunctions.balance_g1(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, rho_1, rho_2, temp_value_1)
+                @inbounds PhysicsFunctions.balance_g2(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, rho_1, rho_2, temp_value_2)
             ])
 
             local delta::Vector{Float64} = @inbounds @fastmath jacobian \ - func_vector

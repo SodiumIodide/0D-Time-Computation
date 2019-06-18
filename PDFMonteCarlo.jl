@@ -6,6 +6,7 @@ include("PDFFunctions.jl")
 using Random
 using DataFrames
 using CSV
+using ProgressMeter
 include("Constants.jl")
 
 function main()::Nothing
@@ -104,11 +105,9 @@ function main()::Nothing
     # BEGIN MONTE CARLO SECOND PASS
 
     # Iteration condition
-    local cont_calc_outer::Bool = true
     local generator::MersenneTwister = MersenneTwister(1234)
 
     # Computational values
-    local iteration_number::Int64 = 0
     local new_delta_t::Float64 = @fastmath (chosentime / sol) / num_t_hist
     local times::Vector{Float64} = @fastmath [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
@@ -122,7 +121,7 @@ function main()::Nothing
     end
 
     # Outer loop
-    while (cont_calc_outer)
+    @showprogress 1 for iteration_number=1:max_iterations_hist
         local rand_num::Float64
 
         # First loop uses initial conditions
@@ -133,7 +132,7 @@ function main()::Nothing
 
         # Innter loop
         for (index, time) in enumerate(times)
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
+            local (opacity_term::Float64, spec_heat_term::Float64, dens_term::Float64, change_prob::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
 
             # Sample whether material changes
             rand_num = @fastmath rand(generator, Float64)
@@ -141,13 +140,12 @@ function main()::Nothing
             if @fastmath(rand_num > change_prob)
                 local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, temp_value)
                 local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, temp_value)
+                local dens::Float64 = PhysicsFunctions.rho(dens_term, temp_value)
 
                 local new_intensity_value::Float64 = PhysicsFunctions.balance_intensity(opacity, new_delta_t, intensity_value, temp_value)
                 local new_temp_value::Float64 = PhysicsFunctions.balance_temp(opacity, spec_heat, dens, new_delta_t, intensity_value, temp_value)
 
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
-
-                local (intensity_bin_no::Int64, temp_bin_no::Int64)
             else
                 material_num = @fastmath (material_num == 1) ? 2 : 1
             end
@@ -162,16 +160,6 @@ function main()::Nothing
             ExponentialHist.push(intensity_2_bin, intensity_value)
             ExponentialHist.push(temperature_2_bin, temp_value)
             ExponentialHist.push(opacity_2_bin, PhysicsFunctions.sigma_a(opacity_2, temp_value))
-        end
-
-        @fastmath iteration_number += 1
-
-        if @fastmath(iteration_number % num_say_hist == 0)
-            println("History Number ", iteration_number)
-        end
-
-        if @fastmath(iteration_number > max_iterations_hist)
-            cont_calc_outer = false
         end
     end
 

@@ -139,7 +139,7 @@ function main()::Nothing
 
         # Innter loop
         for (index, time) in enumerate(times)
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64, change_prob::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
+            local (opacity_term::Float64, spec_heat_term::Float64, dens_term::Float64, change_prob::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
 
             # Sample whether material changes
             @inbounds rand_num = @fastmath rand(gen_array[threadid()], Float64)
@@ -147,13 +147,12 @@ function main()::Nothing
             if @fastmath(rand_num > change_prob)
                 local opacity::Float64 = PhysicsFunctions.sigma_a(opacity_term, temp_value)
                 local spec_heat::Float64 = PhysicsFunctions.c_v(spec_heat_term, temp_value)
+                local dens::Float64 = PhysicsFunctions.rho(dens_term, temp_value)
 
                 local new_intensity_value::Float64 = PhysicsFunctions.balance_intensity(opacity, new_delta_t, intensity_value, temp_value)
                 local new_temp_value::Float64 = PhysicsFunctions.balance_temp(opacity, spec_heat, dens, new_delta_t, intensity_value, temp_value)
 
                 (intensity_value, temp_value) = (new_intensity_value, new_temp_value)
-
-                local (intensity_bin_no::Int64, temp_bin_no::Int64)
             else
                 material_num = @fastmath (material_num == 1) ? 2 : 1
             end

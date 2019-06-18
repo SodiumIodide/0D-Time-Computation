@@ -43,7 +43,7 @@ function main()::Nothing
 
             local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t, opacity_term, dens, spec_heat_term)
             local func_vector::Array{Float64, 1} = [
-                @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t, opacity, past_intensity),
+                @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t, opacity, past_intensity)
                 @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t, opacity, spec_heat, dens, past_temp)
             ]
 

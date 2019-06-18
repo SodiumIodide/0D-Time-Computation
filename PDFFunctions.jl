@@ -28,4 +28,19 @@ module PDFFunctions
 
         return last_index
     end
+
+    function steady_state_fix(times::Vector{Float64})::Int64
+        local index::Int64 = 0
+        local steady_state_search::Bool = true
+        local max_index::Int64 = length(times)
+
+        while (steady_state_search)
+            @fastmath index += 1
+            if @fastmath ((times[index] > ss_fix_time) || (index >= max_index))
+                steady_state_search = false
+            end
+        end
+
+        return index
+    end
 end

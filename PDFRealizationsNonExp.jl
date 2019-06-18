@@ -8,6 +8,7 @@ using Random
 using LinearAlgebra
 using DataFrames
 using CSV
+using ProgressMeter
 include("Constants.jl")
 
 function main()::Nothing
@@ -16,23 +17,22 @@ function main()::Nothing
     # Read previous data to explicitly create binned elements
     # The Monte Carlo data is read, because it is the faster computation method
     # (in comparison to realization generation)
-    local mc_data_location::String = "out/nonlinear/data/nonlinearmc.csv"
-    local minmax_data_location::String = "out/nonlinear/pdf_data/minmax.csv"
+    local mc_data_location::String = "out/nonlinear/data/nonlinear.csv"
 
     # User Input for data existence
     println("\n")
-    println("Did you remember to run the Monte Carlo computation for a two-pass binning?")
+    println("Did you remember to run the Realizations computation for a two-pass binning?")
     println("Press Enter to continue (no additional input)")
-    println("Press C and Enter to run the Monte Carlo computation using current values in Constants.jl")
+    println("Press C and Enter to run the Realizations computation using current values in Constants.jl")
     println("Press K and Enter to quit")
     local continue_calc::String = lowercase(chomp(readline()))
     if (occursin("k", continue_calc))
         println("Terminating execution")
         return nothing
     elseif (occursin("c", continue_calc))
-        println("Running Monte Carlo computation now! Please wait...")
+        println("Running Realizations computation now! Please wait...")
         local cmd::Cmd = Base.julia_cmd()
-        run(`$cmd NonLinearMC.jl`)
+        run(`$cmd NonLinear.jl`)
         println("Finished")
     end
 
@@ -46,12 +46,18 @@ function main()::Nothing
         return nothing
     end
 
+    #=
     local intensity_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
     local intensity_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
     local temperature_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
     local temperature_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature2...]))
 
     local steady_state_index::Int64 = @fastmath maximum([intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss])
+
+    =#
+
+    local steady_state_index::Int64 = PDFFunctions.steady_state_fix(vec([old_data.time...]))
+
     local steady_state_time::Float64 = old_data.time[steady_state_index]
 
     println("Steady state index found to occur at point ", steady_state_index, ", time=", steady_state_time, " ct")
@@ -107,17 +113,15 @@ function main()::Nothing
     # BEGIN REALIZATIONS SECOND PASS
 
     # Iteration condition
-    local cont_calc_outer::Bool = true
     local generator::MersenneTwister = MersenneTwister(1234)
 
     # Computational values
-    local iteration_number::Int64 = 0
     local new_end_time::Float64 = @fastmath chosentime / sol
     local new_delta_t::Float64 = @fastmath new_end_time / num_t_hist
     local times::Vector{Float64} = @fastmath [(x * new_delta_t + t_init) * sol for x in 1:num_t_hist]
 
     # Outer loop
-    while (cont_calc_outer)
+    @showprogress 1 for iteration_number=1:max_iterations_hist
         local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, new_end_time, num_divs_hist, rng=generator)
 
         # First loop uses initial conditions
@@ -128,7 +132,7 @@ function main()::Nothing
         for index = 1:num_cells
             material_num = @inbounds materials[index]
             local delta_t_unstruct::Float64 = @inbounds t_delta[index]
-            local (opacity_term::Float64, spec_heat_term::Float64, dens::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
+            local (opacity_term::Float64, spec_heat_term::Float64, dens_term::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1) : (opacity_2, spec_heat_2, dens_2)
 
             local original_terms::Vector{Float64} = [
                 intensity_value,
@@ -143,6 +147,7 @@ function main()::Nothing
             while @fastmath(error >= tolerance)
                 local opacity::Float64 = @inbounds PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
                 local spec_heat::Float64 = @inbounds PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
+                local dens::Float64 = @inbounds PhysicsFunctions.rho(dens_term, old_terms[2])
 
                 local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local func_vector::Vector{Float64} = [
@@ -169,16 +174,6 @@ function main()::Nothing
             Histogram.push(intensity_2_bin, intensity_value)
             Histogram.push(temperature_2_bin, temp_value)
             Histogram.push(opacity_2_bin, PhysicsFunctions.sigma_a(opacity_2, temp_value))
-        end
-
-        @fastmath iteration_number += 1
-
-        if @fastmath(iteration_number % num_say_hist == 0)
-            println("Realization Number ", iteration_number)
-        end
-
-        if @fastmath(iteration_number > max_iterations_hist)
-            cont_calc_outer = false
         end
     end
 
