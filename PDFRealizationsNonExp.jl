@@ -17,7 +17,7 @@ function main()::Nothing
     # Read previous data to explicitly create binned elements
     # The Monte Carlo data is read, because it is the faster computation method
     # (in comparison to realization generation)
-    local mc_data_location::String = "out/nonlinear/data/nonlinear.csv"
+    local mc_data_location::String = "out/nonlinear/data/nonlinearmc.csv"
 
     # User Input for data existence
     println("\n")
@@ -42,11 +42,10 @@ function main()::Nothing
     if (isfile(mc_data_location))
         old_data = CSV.File(mc_data_location) |> DataFrame
     else
-        println("Cannot find results of a Monte Carlo run, terminating")
+        println("Cannot find results of a Realization run, terminating")
         return nothing
     end
 
-    #=
     local intensity_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
     local intensity_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
     local temperature_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
@@ -54,9 +53,7 @@ function main()::Nothing
 
     local steady_state_index::Int64 = @fastmath maximum([intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss])
 
-    =#
-
-    local steady_state_index::Int64 = PDFFunctions.steady_state_fix(vec([old_data.time...]))
+    #local steady_state_index::Int64 = PDFFunctions.steady_state_fix(vec([old_data.time...]))
 
     local steady_state_time::Float64 = old_data.time[steady_state_index]
 

@@ -18,9 +18,8 @@ function main()::Nothing
     local times::Vector{Float64} = @fastmath [(x * delta_t + t_init) * sol for x in 1:num_t]
 
     # Probability for material sampling
-    local prob_1::Float64 = @fastmath chord_1 / (chord_1 + chord_2)
-    local change_prob_1::Float64 = @fastmath 1.0 / chord_1 * delta_t
-    local change_prob_2::Float64 = @fastmath 1.0 / chord_2 * delta_t
+    local change_prob_1::Float64 = @fastmath delta_t / chord_1
+    local change_prob_2::Float64 = @fastmath delta_t / chord_2
     if @fastmath((change_prob_1 > 1.0) || (change_prob_2 > 1.0))
         println("The value for delta_t is too large for sampling")
         return nothing
@@ -31,6 +30,8 @@ function main()::Nothing
     local stat_2_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
     local stat_1_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
     local stat_2_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_1_opacity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_2_opacity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
 
     # Outer loop
     @showprogress 1 for iteration_number=1:max_iterations
@@ -41,10 +42,10 @@ function main()::Nothing
 
         # Sample initial starting material
         rand_num = @fastmath rand(generator, Float64)
-        local material_num::Int32 = @fastmath (rand_num < prob_1) ? 1 : 2
+        local material_num::Int32 = @fastmath (rand_num < volfrac_1) ? 1 : 2
 
         # Inner loop
-        for (index, time) in enumerate(times)
+        for index=1:num_t
             local (opacity_term::Float64, spec_heat_term::Float64, dens_term::Float64, change_prob::Float64) = @fastmath (material_num == 1) ? (opacity_1, spec_heat_1, dens_1, change_prob_1) : (opacity_2, spec_heat_2, dens_2, change_prob_2)
 
             # Sample whether material changes
@@ -63,9 +64,11 @@ function main()::Nothing
                 if @fastmath(material_num == 1)
                     @inbounds RunningStatistics.push(stat_1_intensity[index], intensity_value)  # erg/cm^2-s
                     @inbounds RunningStatistics.push(stat_1_temp[index], temp_value)  # eV
+                    @inbounds RunningStatistics.push(stat_1_opacity[index], opacity)  # cm^-1
                 else
                     @inbounds RunningStatistics.push(stat_2_intensity[index], intensity_value)  # erg/cm^2-s
                     @inbounds RunningStatistics.push(stat_2_temp[index], temp_value)  # eV
+                    @inbounds RunningStatistics.push(stat_2_opacity[index], opacity)  # cm^-1
                 end
             else
                 material_num = @fastmath (material_num == 1) ? 2 : 1
@@ -94,8 +97,12 @@ function main()::Nothing
     local min_temp_1::Vector{Float64} = RunningStatistics.least.(stat_1_temp)
     local max_temp_2::Vector{Float64} = RunningStatistics.greatest.(stat_2_temp)
     local min_temp_2::Vector{Float64} = RunningStatistics.least.(stat_2_temp)
+    local max_opacity_1::Vector{Float64} = RunningStatistics.greatest.(stat_1_opacity)
+    local min_opacity_1::Vector{Float64} = RunningStatistics.least.(stat_1_opacity)
+    local max_opacity_2::Vector{Float64} = RunningStatistics.greatest.(stat_2_opacity)
+    local min_opacity_2::Vector{Float64} = RunningStatistics.least.(stat_2_opacity)
 
-    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2)
+    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2, maxopacity1=max_opacity_1, minopacity1=min_opacity_1, maxopacity2=max_opacity_2, minopacity2=min_opacity_2)
 
     CSV.write("out/nonlinear/data/nonlinearmc.csv", tabular)
 

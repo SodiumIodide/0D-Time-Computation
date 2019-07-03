@@ -26,11 +26,11 @@ function main()::Nothing
     local term_5::Float64 = @fastmath 1.0 + delta_t * sol * opacity_2 + delta_t / chord_2
     local term_6::Float64 = @fastmath - delta_t * sol^2 * opacity_2
     local term_7::Float64 = @fastmath - delta_t * factor_1 * opacity_1
-    local term_8::Float64 = @fastmath 1.0 + delta_t * factor_1 * opacity_1 * sol + delta_t / chord_1 * factor_1
-    local term_9::Float64 = @fastmath - delta_t / chord_2 * factor_1
+    local term_8::Float64 = @fastmath 1.0 + delta_t * factor_1 * opacity_1 * sol + delta_t / chord_1
+    local term_9::Float64 = @fastmath - delta_t / chord_2
     local term_10::Float64 = @fastmath - delta_t * factor_2 * opacity_2
-    local term_11::Float64 = @fastmath - delta_t / chord_1 * factor_2
-    local term_12::Float64 = @fastmath 1.0 + delta_t * factor_2 * opacity_2 * sol + delta_t / chord_2 * factor_2
+    local term_11::Float64 = @fastmath - delta_t / chord_1
+    local term_12::Float64 = @fastmath 1.0 + delta_t * factor_2 * opacity_2 * sol + delta_t / chord_2
 
     # Set up problem definitions
     # This matrix is a constant parameter
@@ -68,16 +68,13 @@ function main()::Nothing
     local times::Vector{Float64} = @fastmath [(x * delta_t + t_init) * sol for x in 1:num_t]
 
     # Take the implicit volume fraction into account
-    @fastmath intensity_1 /= volfrac_1  # erg/cm^2-s
-    @fastmath intensity_2 /= volfrac_2  # erg/cm^2-s
-    @fastmath energy_1 /= volfrac_1  # erg/cm^3
-    @fastmath energy_2 /= volfrac_2  # erg/cm^3
+    @fastmath intensity_1 ./= volfrac_1  # erg/cm^2-s
+    @fastmath intensity_2 ./= volfrac_2  # erg/cm^2-s
+    @fastmath energy_1 ./= volfrac_1  # erg/cm^3
+    @fastmath energy_2 ./= volfrac_2  # erg/cm^3
 
     local temp_1::Vector{Float64} = @fastmath @. (energy_1 / arad)^(1.0 / 4.0)  # eV
     local temp_2::Vector{Float64} = @fastmath @. (energy_2 / arad)^(1.0 / 4.0)  # eV
-
-    local y_min::Float64 = floor(log10(min(min(intensity_1...), min(intensity_2...))))
-    local y_max::Float64 = ceil(log10(max(max(intensity_1...), max(intensity_2...))))
 
     tabular::DataFrame = DataFrame(time=times, intensity1=intensity_1, temperature1=temp_1, intensity2=intensity_2, temperature2=temp_2)
 

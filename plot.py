@@ -12,7 +12,7 @@ CSVPATH = f"{PLOTPATH}/data"
 HISTPATH = f"{PLOTPATH}/pdf_data"
 
 XSCALE="log"
-YSCALE="linear"
+YSCALE="log"
 HISTXSCALE="linear"
 HISTYSCALE="linear"
 
@@ -178,9 +178,9 @@ def main():
         plt.plot(nonlinear['time'], nl_lb_intensity_2, color='r', linestyle=':', label=None)
         plt.plot(nonlinear['time'], nl_ub_intensity_2, color='r', linestyle=':', label=None)
         plt.fill_between(nonlinear['time'], nl_lb_intensity_2, nl_ub_intensity_2, color='r', alpha=0.5)
-        plt.title("Intensity Plot")
+        #plt.title("Intensity Plot")
         plt.xlabel("Time - ct (cm)")
-        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.ylabel("Intensity (erg/cm$^2$-s)")
         plt.xscale(XSCALE)
         plt.yscale(YSCALE)
         plt.grid(b=True, which="both", axis="both")
@@ -199,7 +199,7 @@ def main():
         plt.plot(nonlinear['time'], nl_lb_temp_2, color='r', linestyle=':', label=None)
         plt.plot(nonlinear['time'], nl_ub_temp_2, color='r', linestyle=':', label=None)
         plt.fill_between(nonlinear['time'], nl_lb_temp_2, nl_ub_temp_2, color='r', alpha=0.5)
-        plt.title("Temperature Plot")
+        #plt.title("Temperature Plot")
         plt.xlabel("Time - ct (cm)")
         plt.ylabel("Temperature (eV)")
         plt.xscale(XSCALE)
@@ -368,9 +368,9 @@ def main():
         plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_2, color='r', linestyle=':', label=None)
         plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_2, color='r', linestyle=':', label=None)
         plt.fill_between(nonlinear_mc['time'], mc_nl_lb_intensity_2, mc_nl_ub_intensity_2, color='r', alpha=0.5)
-        plt.title("Monte Carlo Intensity Plot")
+        #plt.title("Monte Carlo Intensity Plot")
         plt.xlabel("Time - ct (cm)")
-        plt.ylabel("Intensity (erg/cm^2-s)")
+        plt.ylabel("Intensity (erg/cm$^2$-s)")
         plt.xscale(XSCALE)
         plt.yscale(YSCALE)
         plt.grid(b=True, which="both", axis="both")
@@ -389,7 +389,7 @@ def main():
         plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_2, color='r', linestyle=':', label=None)
         plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_2, color='r', linestyle=':', label=None)
         plt.fill_between(nonlinear_mc['time'], mc_nl_lb_temp_2, mc_nl_ub_temp_2, color='r', alpha=0.5)
-        plt.title("Monte Carlo Temperature Plot")
+        #plt.title("Monte Carlo Temperature Plot")
         plt.xlabel("Time - ct (cm)")
         plt.ylabel("Temperature (eV)")
         plt.xscale(XSCALE)

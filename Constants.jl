@@ -3,10 +3,10 @@
 # Histogram and problem parameters
 global const num_t = convert(Int64, 1e5)
 global const num_t_hist = convert(Int64, 1e5)
-global const num_divs = convert(Int64, 1e1)
-global const num_divs_hist = convert(Int64, 1e1)
-global const max_iterations = convert(Int64, 1e4)
-global const max_iterations_hist = convert(Int64, 1e6)
+global const num_divs = convert(Int64, 1e3)
+global const num_divs_hist = convert(Int64, 1e3)
+global const max_iterations = convert(Int64, 1e5)
+global const max_iterations_hist = convert(Int64, 5e7)
 
 global const ss_fix_time = 1e0  # ct = cm
 

@@ -1,6 +1,8 @@
 module MeshMap
     export struct_to_unstruct, unstruct_to_struct, material_calc
 
+    set_zero_subnormals(true)
+
     function struct_to_unstruct(structured::Vector{Float64}, struct_delta::Float64, struct_size::Int64, unstruct_delta::Vector{Float64}, unstruct_size::Int64)::Vector{Float64}
         # Assign counter to zero due to pre-fetch increment
         local counter::Int64 = 0
@@ -10,6 +12,7 @@ module MeshMap
         local unstruct_distance_tally::Float64 = 0.0  # s
         local struct_distance_tally::Float64 = 0.0  # s
         local leftover_distance = 0.0  # s
+        local delta::Float64 = 0.0  # s
 
         # Create the new unstructured array map
         local unstructured::Vector{Float64} = Vector{Float64}(undef, unstruct_size)
@@ -19,55 +22,48 @@ module MeshMap
             # Start from the border with a zero weight for the current cell
             local distance_overlap::Bool = false
             local weight_tally::Float64 = 0.0  # unit*s
-            local delta::Float64 = 0.0  # s
 
             # Increment unstructured distance tally
-            unstruct_distance_tally += unstruct_delta[i]  # s
+            @inbounds @fastmath unstruct_distance_tally += unstruct_delta[i]  # s
 
             # Carry over leftover distance
-            if (leftover_distance != 0.0)
+            if @fastmath(leftover_distance != 0.0)
                 # If leftover_distance is still over-reaching the tally boundaries
-                if ((distance_tally + leftover_distance) >= unstruct_distance_tally)
-                    delta = unstruct_delta[i]  # s
-                    leftover_distance = struct_distance_tally - unstruct_distance_tally  # s
+                if @fastmath((distance_tally + leftover_distance) >= unstruct_distance_tally)
+                    @inbounds delta = unstruct_delta[i]  # s
+                    leftover_distance = @fastmath struct_distance_tally - unstruct_distance_tally  # s
                     distance_overlap = true
                 else
                     delta = leftover_distance  # s
                     leftover_distance = 0.0  # s
                 end
-                weight_tally += delta * structured[counter]  # unit*s
-                distance_tally += delta  # s
+                @inbounds @fastmath weight_tally += delta * structured[counter]  # unit*s
+                @fastmath distance_tally += delta  # s
             end
 
-            while ((!distance_overlap) && (counter < struct_size))
-                # Increment counter (strucutred index)
-                counter += 1
+            while @fastmath((!distance_overlap) && (counter < struct_size))
+                # Increment counter (structured index)
+                @fastmath counter += 1
 
                 # Increment structured distance tally
-                struct_distance_tally += struct_delta  # s
+                @fastmath struct_distance_tally += struct_delta  # s
 
                 # Check for boundary overlap
-                if ((struct_distance_tally >= unstruct_distance_tally) || (counter == struct_size))
-                    delta = unstruct_distance_tally - distance_tally  # s
-                    leftover_distance = struct_distance_tally - unstruct_distance_tally  # s
+                if @fastmath((struct_distance_tally >= unstruct_distance_tally) || (counter == struct_size))
+                    delta = @fastmath unstruct_distance_tally - distance_tally  # s
+                    leftover_distance = @fastmath struct_distance_tally - unstruct_distance_tally  # s
                     distance_overlap = true
                 else
                     delta = struct_delta  # s
-                    leftover_distance = 0.0  # s
                 end
 
                 # Increment the known distance tally
                 distance_tally += delta  # s
 
                 # Apply linear weighted tally
-                weight_tally += delta * structured[counter]  # unit*s
-
-                # Reset counter to leftover distance and re-use value
-                if (distance_overlap)
-                    counter -= 1
-                end
+                @inbounds @fastmath weight_tally += delta * structured[counter]  # unit*s
             end  # Structured loop
-            unstructured[i] = weight_tally / unstruct_delta[i]  # unit
+            @inbounds @fastmath unstructured[i] = weight_tally / unstruct_delta[i]  # unit
         end  # Unstructured loop
         return unstructured
     end
@@ -80,7 +76,8 @@ module MeshMap
         local distance_tally::Float64 = 0.0  # s
         local unstruct_distance_tally::Float64 = 0.0  # s
         local struct_distance_tally::Float64 = 0.0  # s
-        local leftover_distance = 0.0  # s
+        local leftover_distance::Float64 = 0.0  # s
+        local delta::Float64 = 0.0  # s
 
         # Create the new structured array map
         local structured::Vector{Float64} = Vector{Float64}(undef, struct_size)
@@ -90,61 +87,53 @@ module MeshMap
             # Start from the border with a zero weight for the current cell
             local distance_overlap::Bool = false
             local weight_tally::Float64 = 0.0  # unit*s
-            local delta::Float64 = 0.0  # s
 
             # Increment structured distance tally
-            struct_distance_tally += struct_delta  # s
+            @fastmath struct_distance_tally += struct_delta  # s
 
             # Carry over leftover distance
-            if (leftover_distance != 0.0)
+            if @fastmath(leftover_distance > 0.0)
                 # If leftover_distance is still over-reaching the tally boundaries
-                if ((distance_tally + leftover_distance) >= unstruct_distance_tally)
+                if @fastmath((distance_tally + leftover_distance) >= struct_distance_tally)
                     delta = struct_delta  # s
-                    leftover_distance = unstruct_distance_tally - struct_distance_tally  # s
+                    leftover_distance = @fastmath unstruct_distance_tally - struct_distance_tally  # s
                     distance_overlap = true
                 else
                     delta = leftover_distance  # s
                     leftover_distance = 0.0  # s
                 end
-                weight_tally += delta * unstructured[counter]  # unit*s
-                distance_tally += delta  # s
+                @inbounds @fastmath weight_tally += delta * unstructured[counter]  # unit*s
+                @fastmath distance_tally += delta  # s
             end
 
-            while ((!distance_overlap) && (counter < unstruct_size))
-                # Increment counter (strucutred index)
-                counter += 1
+            while @fastmath((!distance_overlap) && (counter < unstruct_size))
+                # Increment counter (unstructured index)
+                @fastmath counter += 1
 
                 # Increment unstructured distance tally
-                unstruct_distance_tally += unstruct_delta[counter]  # s
+                @fastmath @inbounds unstruct_distance_tally += unstruct_delta[counter]  # s
 
                 # Check for boundary overlap
-                if (unstruct_distance_tally >= struct_distance_tally || (counter == unstruct_size))
-                    delta = struct_distance_tally - distance_tally  # s
-                    leftover_distance = unstruct_distance_tally - struct_distance_tally  # s
+                if @fastmath(unstruct_distance_tally >= struct_distance_tally || (counter == unstruct_size))
+                    delta = @fastmath struct_distance_tally - distance_tally  # s
+                    leftover_distance = @fastmath unstruct_distance_tally - struct_distance_tally  # s
                     distance_overlap = true
                 else
-                    delta = unstruct_delta[counter]  # s
-                    leftover_distance = 0.0  # s
+                    @inbounds delta = unstruct_delta[counter]  # s
                 end
 
                 # Increment the known distance tally
-                distance_tally += delta  # s
+                @fastmath distance_tally += delta  # s
 
                 # Apply linear weighted tally
-                weight_tally += delta * unstructured[counter]  # unit*s
-
-                # Reset counter to leftover distance and re-use value
-                if (distance_overlap)
-                    counter -= 1
-                end
+                @inbounds @fastmath weight_tally += delta * unstructured[counter]  # unit*s
             end  # Untructured loop
-            structured[i] = weight_tally / struct_delta  # unit
+            @inbounds @fastmath structured[i] = weight_tally / struct_delta  # unit
         end  # Structured loop
         return structured
     end
 
     function material_calc(unstructured::Vector{Float64}, unstruct_delta::Vector{Float64}, unstruct_size::Int64, materials::Vector{Int32}, struct_delta::Float64, struct_size::Int64, num_materials::Int32)::Array{Float64, 2}
-        set_zero_subnormals(true)
         # Create the new structured array map
         local material_struct::Array{Float64, 2} = zeros(Float64, struct_size, num_materials)
         for k::Int32 = 1:num_materials

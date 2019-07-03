@@ -49,7 +49,7 @@ function main()::Nothing
             local rho_2::Float64 = @inbounds PhysicsFunctions.rho(dens_2, old_terms[4])
 
             #local jacobian::Array{Float64, 2} = PhysicsFunctions.make_jacobian_heuristic(old_terms...)
-            local jacobian::Array{Float64, 2} = PhysicsFunctions.complex_step_jacobian_heuristic(old_terms...)
+            local jacobian::Array{Float64, 2} = PhysicsFunctions.complex_step_jacobian_heuristic(old_terms..., intensity_value_1, intensity_value_2, temp_value_1, temp_value_2)
             local func_vector::Vector{Float64} = vec([
                 @inbounds PhysicsFunctions.balance_f1(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, rho_1, rho_2, intensity_value_1)
                 @inbounds PhysicsFunctions.balance_f2(old_terms..., sigma_a_1, sigma_a_2, c_v_1, c_v_2, rho_1, rho_2, intensity_value_2)

@@ -44,8 +44,6 @@ function main()::Nothing
         return nothing
     end
 
-    #=
-
     local intensity_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity1...]))
     local intensity_2_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.intensity2...]))
     local temperature_1_ss::Int64 = @inbounds PDFFunctions.locate_steady_state(vec([old_data.temperature1...]))
@@ -53,9 +51,7 @@ function main()::Nothing
 
     local steady_state_index::Int64 = @fastmath maximum([intensity_1_ss, intensity_2_ss, temperature_1_ss, temperature_2_ss])
 
-    =#
-
-    local steady_state_index::Int64 = PDFFunctions.steady_state_fix(vec([old_data.time...]))
+    #local steady_state_index::Int64 = PDFFunctions.steady_state_fix(vec([old_data.time...]))
 
     local steady_state_time::Float64 = old_data.time[steady_state_index]
 
@@ -87,7 +83,12 @@ function main()::Nothing
     local intensity_2_max::Float64 = old_data.maxintensity2[chosenindex]
     local temperature_2_min::Float64 = old_data.mintemperature2[chosenindex]
     local temperature_2_max::Float64 = old_data.maxtemperature2[chosenindex]
+    local opacity_1_min::Float64 = old_data.minopacity1[chosenindex]
+    local opacity_1_max::Float64 = old_data.maxopacity1[chosenindex]
+    local opacity_2_min::Float64 = old_data.minopacity2[chosenindex]
+    local opacity_2_max::Float64 = old_data.maxopacity2[chosenindex]
 
+    #=
     local opacity_1_op::Vector{Float64} = [
         PhysicsFunctions.sigma_a(opacity_1, temperature_1_min);
         PhysicsFunctions.sigma_a(opacity_1, temperature_1_max)
@@ -100,6 +101,7 @@ function main()::Nothing
     local opacity_1_max::Float64 = @fastmath maximum(opacity_1_op)
     local opacity_2_min::Float64 = @fastmath minimum(opacity_2_op)
     local opacity_2_max::Float64 = @fastmath maximum(opacity_2_op)
+    =#
 
     # Arrays for binning
     local intensity_1_bin::Histogram.Hist = Histogram.Hist(num_bins, intensity_1_min, intensity_1_max)
@@ -178,12 +180,18 @@ function main()::Nothing
     local material_2_opacity_bin::Vector{Float64} = Histogram.histogram(opacity_2_bin)
 
     # Normalize histograms
-    @fastmath material_1_intensity_bin ./= sum(material_1_intensity_bin)
-    @fastmath material_2_intensity_bin ./= sum(material_2_intensity_bin)
-    @fastmath material_1_temperature_bin ./= sum(material_1_temperature_bin)
-    @fastmath material_2_temperature_bin ./= sum(material_2_temperature_bin)
-    @fastmath material_1_opacity_bin ./= sum(material_1_opacity_bin)
-    @fastmath material_2_opacity_bin ./= sum(material_2_opacity_bin)
+    local tot_m1_intensity::Float64 = @fastmath sum(material_1_intensity_bin)
+    local tot_m2_intensity::Float64 = @fastmath sum(material_2_intensity_bin)
+    local tot_m1_temp::Float64 = @fastmath sum(material_1_temperature_bin)
+    local tot_m2_temp::Float64 = @fastmath sum(material_2_temperature_bin)
+    local tot_m1_opacity::Float64 = @fastmath sum(material_1_opacity_bin)
+    local tot_m2_opacity::Float64 = @fastmath sum(material_2_opacity_bin)
+    @fastmath material_1_intensity_bin ./= tot_m1_intensity
+    @fastmath material_2_intensity_bin ./= tot_m2_intensity
+    @fastmath material_1_temperature_bin ./= tot_m1_temp
+    @fastmath material_2_temperature_bin ./= tot_m2_temp
+    @fastmath material_1_opacity_bin ./= tot_m1_opacity
+    @fastmath material_2_opacity_bin ./= tot_m2_opacity
 
     local material_1_intensity_array::Vector{Float64} = Histogram.distribution(intensity_1_bin)
     local material_2_intensity_array::Vector{Float64} = Histogram.distribution(intensity_2_bin)
