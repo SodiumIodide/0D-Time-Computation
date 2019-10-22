@@ -1,7 +1,7 @@
 module PDFFunctions
     include("Constants.jl")
 
-    export locate_steady_state
+    export locate_steady_state, steady_state_fix
 
     function locate_steady_state(data::Vector{Float64})::Int64
         local point::Float64 = 0.0

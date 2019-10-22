@@ -29,7 +29,7 @@ global const hist_early_index = 100
 
 # Physics constants
 global const sol = 29979245800.0  # cm/s
-global const arad = 137.2017050419133  # erg/cm^2-eV^4
+global const arad = 137.2017050419133  # erg/cm^3-eV^4
 global const sb_const = 5.6704e-5 * 11604.525^4  # erg/cm^2-s-eV^4
 
 # Problem physics parameters

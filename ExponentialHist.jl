@@ -1,5 +1,5 @@
 module ExponentialHist
-    export ExpHist, histogram, number, push, distribution
+    export ExpHist, histogram, push, distribution
 
     mutable struct ExpHist
         m_length::Int64
