@@ -20,9 +20,10 @@ module PhysicsFunctions
     function balance_intensity(opacity::Float64, dt::Float64, past_intensity::Float64, past_temp::Float64)::Float64
         set_zero_subnormals(true)
         local term_1::Float64 = @fastmath dt * sol^2 * opacity * arad * past_temp^4
-        local term_2::Float64 = @fastmath (1.0 - dt * sol * opacity) * past_intensity
+        local term_2::Float64 = @fastmath (1.0 - dt * sol * destruction_factor * opacity) * past_intensity
+        local result::Float64 = @fastmath term_1 + term_2
 
-        return @fastmath term_1 + term_2
+        return @fastmath (result < 0.0) ? 0.0 : result
     end
 
     function balance_temp(opacity::Float64, spec_heat::Float64, density::Float64, dt::Float64, past_intensity::Float64, past_temp::Float64)::Float64
@@ -30,8 +31,9 @@ module PhysicsFunctions
         local term_1::Float64 = @fastmath dt / (density * spec_heat) * opacity * past_intensity
         local term_2::Float64 = @fastmath - dt / (density * spec_heat) * sol * opacity * arad * past_temp^4
         local term_3::Float64 = past_temp
+        local result::Float64 = @fastmath term_1 + term_2 + term_3
 
-        return @fastmath term_1 + term_2 + term_3
+        return @fastmath (result < 0.0) ? 0.0 : result
     end
 
     # Realization numerical functions

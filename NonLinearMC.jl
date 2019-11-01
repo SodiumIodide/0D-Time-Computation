@@ -102,7 +102,11 @@ function main()::Nothing
     local max_opacity_2::Vector{Float64} = RunningStatistics.greatest.(stat_2_opacity)
     local min_opacity_2::Vector{Float64} = RunningStatistics.least.(stat_2_opacity)
 
-    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2, maxopacity1=max_opacity_1, minopacity1=min_opacity_1, maxopacity2=max_opacity_2, minopacity2=min_opacity_2)
+    local avg_intensity::Vector{Float64} = @fastmath @. material_1_intensity * volfrac_1 + material_2_intensity * volfrac_2
+    local avg_temperature::Vector{Float64} = @fastmath @. material_1_temp * volfrac_1 + material_2_temp * volfrac_2
+    local avg_opacity::Vector{Float64} = @fastmath @. RunningStatistics.mean(stat_1_opacity) * volfrac_1 + RunningStatistics.mean(stat_2_opacity) * volfrac_2
+
+    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2, maxopacity1=max_opacity_1, minopacity1=min_opacity_1, maxopacity2=max_opacity_2, minopacity2=min_opacity_2, intensityarr=avg_intensity, temperaturearr=avg_temperature, opacityarr=avg_opacity)
 
     CSV.write("out/nonlinear/data/nonlinearmc.csv", tabular)
 

@@ -11,8 +11,10 @@ PLOTPATH = "./out/nonlinear"
 HISTPATH = f"{PLOTPATH}/pdf_data"
 DATAPATH = f"{PLOTPATH}/data"
 
+PLOT_STD_DEV = False
+
 XSCALE = "log"
-YSCALE = "log"
+YSCALE = "linear"
 
 HISTXSCALE = "linear"
 HISTYSCALE = "linear"
@@ -168,12 +170,13 @@ def main():
         # Intensity
         plt.plot(nonlinear['time'], nonlinear['intensity1'], color='b', label="Material 1")
         plt.plot(nonlinear['time'], nonlinear['intensity2'], color='r', label="Material 2")
-        plt.plot(nonlinear['time'], nl_lb_intensity_1, color='b', linestyle=':', label=None)
-        plt.plot(nonlinear['time'], nl_ub_intensity_1, color='b', linestyle=':', label=None)
-        plt.fill_between(nonlinear['time'], nl_lb_intensity_1, nl_ub_intensity_1, color='b', alpha=0.5)
-        plt.plot(nonlinear['time'], nl_lb_intensity_2, color='r', linestyle=':', label=None)
-        plt.plot(nonlinear['time'], nl_ub_intensity_2, color='r', linestyle=':', label=None)
-        plt.fill_between(nonlinear['time'], nl_lb_intensity_2, nl_ub_intensity_2, color='r', alpha=0.5)
+        if PLOT_STD_DEV:
+            plt.plot(nonlinear['time'], nl_lb_intensity_1, color='b', linestyle=':', label=None)
+            plt.plot(nonlinear['time'], nl_ub_intensity_1, color='b', linestyle=':', label=None)
+            plt.fill_between(nonlinear['time'], nl_lb_intensity_1, nl_ub_intensity_1, color='b', alpha=0.5)
+            plt.plot(nonlinear['time'], nl_lb_intensity_2, color='r', linestyle=':', label=None)
+            plt.plot(nonlinear['time'], nl_ub_intensity_2, color='r', linestyle=':', label=None)
+            plt.fill_between(nonlinear['time'], nl_lb_intensity_2, nl_ub_intensity_2, color='r', alpha=0.5)
         plt.plot(am['time'], am['intensityarr'], color='k', label="Atomic Mix")
         plt.plot(lp['time'], lp['intensityarr'], color='g', label="Heuristic")
         #plt.title("Intensity Plot")
@@ -191,12 +194,13 @@ def main():
         # Temperature
         plt.plot(nonlinear['time'], nonlinear['temperature1'], color='b', label="Material 1")
         plt.plot(nonlinear['time'], nonlinear['temperature2'], color='r', label="Material 2")
-        plt.plot(nonlinear['time'], nl_lb_temp_1, color='b', linestyle=':', label=None)
-        plt.plot(nonlinear['time'], nl_ub_temp_1, color='b', linestyle=':', label=None)
-        plt.fill_between(nonlinear['time'], nl_lb_temp_1, nl_ub_temp_1, color='b', alpha=0.5)
-        plt.plot(nonlinear['time'], nl_lb_temp_2, color='r', linestyle=':', label=None)
-        plt.plot(nonlinear['time'], nl_ub_temp_2, color='r', linestyle=':', label=None)
-        plt.fill_between(nonlinear['time'], nl_lb_temp_2, nl_ub_temp_2, color='r', alpha=0.5)
+        if PLOT_STD_DEV:
+            plt.plot(nonlinear['time'], nl_lb_temp_1, color='b', linestyle=':', label=None)
+            plt.plot(nonlinear['time'], nl_ub_temp_1, color='b', linestyle=':', label=None)
+            plt.fill_between(nonlinear['time'], nl_lb_temp_1, nl_ub_temp_1, color='b', alpha=0.5)
+            plt.plot(nonlinear['time'], nl_lb_temp_2, color='r', linestyle=':', label=None)
+            plt.plot(nonlinear['time'], nl_ub_temp_2, color='r', linestyle=':', label=None)
+            plt.fill_between(nonlinear['time'], nl_lb_temp_2, nl_ub_temp_2, color='r', alpha=0.5)
         plt.plot(am['time'], am['temperaturearr'], color='k', label="Atomic Mix")
         plt.plot(lp['time'], lp['temperaturearr'], color='g', label="Heuristic")
         #plt.title("Temperature Plot")
@@ -226,14 +230,16 @@ def main():
         mc_nl_ub_temp_2 = nonlinear_mc['temperature2'] + mc_nl_std_temp_2
 
         # Intensity
-        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='b', label="Material 1")
-        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', label="Material 2")
-        plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_1, color='b', linestyle=':', label=None)
-        plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_1, color='b', linestyle=':', label=None)
-        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_intensity_1, mc_nl_ub_intensity_1, color='b', alpha=0.5)
-        plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_2, color='r', linestyle=':', label=None)
-        plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_2, color='r', linestyle=':', label=None)
-        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_intensity_2, mc_nl_ub_intensity_2, color='r', alpha=0.5)
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensityarr'], color='c', label="Exact")
+        #plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='b', label="Material 1")
+        #plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', label="Material 2")
+        if PLOT_STD_DEV:
+            plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_1, color='b', linestyle=':', label=None)
+            plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_1, color='b', linestyle=':', label=None)
+            plt.fill_between(nonlinear_mc['time'], mc_nl_lb_intensity_1, mc_nl_ub_intensity_1, color='b', alpha=0.5)
+            plt.plot(nonlinear_mc['time'], mc_nl_lb_intensity_2, color='r', linestyle=':', label=None)
+            plt.plot(nonlinear_mc['time'], mc_nl_ub_intensity_2, color='r', linestyle=':', label=None)
+            plt.fill_between(nonlinear_mc['time'], mc_nl_lb_intensity_2, mc_nl_ub_intensity_2, color='r', alpha=0.5)
         plt.plot(am['time'], am['intensityarr'], color='k', label="Atomic Mix")
         plt.plot(lp['time'], lp['intensityarr'], color='g', label="Heuristic")
         #plt.title("Monte Carlo Intensity Plot")
@@ -249,14 +255,16 @@ def main():
         plt.clf()
 
         # Temperature
-        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='b', label="Material 1")
-        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='r', label="Material 2")
-        plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_1, color='b', linestyle=':', label=None)
-        plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_1, color='b', linestyle=':', label=None)
-        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_temp_1, mc_nl_ub_temp_1, color='b', alpha=0.5)
-        plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_2, color='r', linestyle=':', label=None)
-        plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_2, color='r', linestyle=':', label=None)
-        plt.fill_between(nonlinear_mc['time'], mc_nl_lb_temp_2, mc_nl_ub_temp_2, color='r', alpha=0.5)
+        #plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='b', label="Material 1")
+        #plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='r', label="Material 2")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperaturearr'], color='c', label="Exact")
+        if PLOT_STD_DEV:
+            plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_1, color='b', linestyle=':', label=None)
+            plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_1, color='b', linestyle=':', label=None)
+            plt.fill_between(nonlinear_mc['time'], mc_nl_lb_temp_1, mc_nl_ub_temp_1, color='b', alpha=0.5)
+            plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_2, color='r', linestyle=':', label=None)
+            plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_2, color='r', linestyle=':', label=None)
+            plt.fill_between(nonlinear_mc['time'], mc_nl_lb_temp_2, mc_nl_ub_temp_2, color='r', alpha=0.5)
         plt.plot(am['time'], am['temperaturearr'], color='k', label="Atomic Mix")
         plt.plot(lp['time'], lp['temperaturearr'], color='g', label="Heuristic")
         #plt.title("Monte Carlo Temperature Plot")

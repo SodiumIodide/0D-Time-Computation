@@ -5,23 +5,33 @@ using DataFrames
 using CSV
 include("Constants.jl")
 
-function explicit_intensity1(intensity1_prev::Float64, intensity2_prev::Float64, temp1_prev::Float64, opacity::Float64)::Float64
+@inline function explicit_intensity1(intensity1_prev::Float64, intensity2_prev::Float64, temp1_prev::Float64, opacity::Float64)::Float64
     local emission::Float64 = @fastmath delta_t * sol^2 * opacity * arad * temp1_prev^4
-    local absorption::Float64 = @fastmath delta_t * sol * opacity * intensity1_prev
+    local absorption::Float64 = @fastmath delta_t * sol * destruction_factor * opacity * intensity1_prev
     local lp_term::Float64 = @fastmath delta_t * (volfrac_2 * intensity2_prev / chord_2 - volfrac_1 * intensity1_prev / chord_1)
+    local return_value = @fastmath intensity1_prev + emission - absorption + lp_term
 
-    return @fastmath intensity1_prev + emission - absorption + lp_term
+    if @fastmath (return_value < 0.0)
+        return_value = 0.0
+    end
+
+    return return_value
 end
 
-function explicit_intensity2(intensity2_prev::Float64, intensity1_prev::Float64, temp2_prev::Float64, opacity::Float64)::Float64
+@inline function explicit_intensity2(intensity2_prev::Float64, intensity1_prev::Float64, temp2_prev::Float64, opacity::Float64)::Float64
     local emission::Float64 = @fastmath delta_t * sol^2 * opacity * arad * temp2_prev^4
-    local absorption::Float64 = @fastmath delta_t * sol * opacity * intensity2_prev
+    local absorption::Float64 = @fastmath delta_t * sol * destruction_factor * opacity * intensity2_prev
     local lp_term::Float64 = @fastmath delta_t * (volfrac_1 * intensity1_prev / chord_1 - volfrac_2 * intensity2_prev / chord_2)
+    local return_value = @fastmath intensity2_prev + emission - absorption + lp_term
 
-    return @fastmath intensity2_prev + emission - absorption + lp_term
+    if @fastmath (return_value < 0.0)
+        return_value = 0.0
+    end
+
+    return return_value
 end
 
-function explicit_temp1(temp1_prev::Float64, temp2_prev::Float64, intensity1_prev::Float64, opacity::Float64, dens::Float64, spec_heat::Float64)::Float64
+@inline function explicit_temp1(temp1_prev::Float64, temp2_prev::Float64, intensity1_prev::Float64, opacity::Float64, dens::Float64, spec_heat::Float64)::Float64
     local alpha::Float64 = @fastmath delta_t / (dens * spec_heat)
     local absorption::Float64 = @fastmath alpha * opacity * intensity1_prev
     local emission::Float64 = @fastmath alpha * sol * opacity * arad * temp1_prev^4
@@ -30,7 +40,7 @@ function explicit_temp1(temp1_prev::Float64, temp2_prev::Float64, intensity1_pre
     return @fastmath temp1_prev + absorption - emission + lp_term
 end
 
-function explicit_temp2(temp2_prev::Float64, temp1_prev::Float64, intensity2_prev::Float64, opacity::Float64, dens::Float64, spec_heat::Float64)::Float64
+@inline function explicit_temp2(temp2_prev::Float64, temp1_prev::Float64, intensity2_prev::Float64, opacity::Float64, dens::Float64, spec_heat::Float64)::Float64
     local alpha::Float64 = @fastmath delta_t / (dens * spec_heat)
     local absorption::Float64 = @fastmath alpha * opacity * intensity2_prev
     local emission::Float64 = @fastmath alpha * sol * opacity * arad * temp2_prev^4

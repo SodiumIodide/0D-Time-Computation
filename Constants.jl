@@ -46,6 +46,7 @@ global const spec_heat_1 = 1e0  # erg/g-eV
 global const spec_heat_2 = 1e0  # erg/g-eV
 global const volfrac_1 = chord_1 / (chord_1 + chord_2)
 global const volfrac_2 = 1.0 - volfrac_1
+global const destruction_factor = 1.5
 
 # Linear factors
 global const factor_1 = 4.0 * arad / (dens_1 * spec_heat_1)  # eV^-3

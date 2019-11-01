@@ -12,7 +12,7 @@ CSVPATH = f"{PLOTPATH}/data"
 HISTPATH = f"{PLOTPATH}/pdf_data"
 
 XSCALE="log"
-YSCALE="log"
+YSCALE="linear"
 HISTXSCALE="linear"
 HISTYSCALE="linear"
 

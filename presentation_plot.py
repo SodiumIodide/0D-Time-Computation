@@ -13,7 +13,7 @@ DATAPATH = "out/nonlinear/data"
 PLOTPATH = "out/nonlinear"
 
 XSCALE = "log"
-YSCALE = "log"
+YSCALE = "linear"
 HISTXSCALE = "linear"
 HISTYSCALE = "linear"
 
