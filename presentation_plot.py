@@ -17,9 +17,14 @@ YSCALE = "linear"
 HISTXSCALE = "linear"
 HISTYSCALE = "linear"
 
+CHORD_1 = 1e-3
+CHORD_2 = 5e-3
+VF_1 = CHORD_1 / (CHORD_1 + CHORD_2)
+VF_2 = 1.0 - VF_1
+
 def main():
     '''Main function'''
-    serial_exists = gpu_exists = hist_exists = True
+    serial_exists = gpu_exists = hist_exists = heur_exists = am_exists = True
     try:
         serial_data = pd.read_csv(f"./{DATAPATH}/output.csv")
     except FileNotFoundError:
@@ -32,6 +37,14 @@ def main():
         hist_data = pd.read_csv(f"./{HISTPATH}/mc_pdf.csv")
     except FileNotFoundError:
         hist_exists = False
+    try:
+        heur_data = pd.read_csv(f"./{DATAPATH}/levermorepomraning.csv")
+    except FileNotFoundError:
+        heur_exists = False
+    try:
+        am_data = pd.read_csv(f"./{DATAPATH}/atomicmix.csv")
+    except FileNotFoundError:
+        am_exists = False
 
     if not os.path.exists(f"./{PLOTPATH}"):
         os.makedirs(f"./{PLOTPATH}")
@@ -204,15 +217,22 @@ def main():
         plt.cla()
         plt.clf()
 
-    if hist_exists:
-        time_ss = hist_data['time'][0]
+    if hist_exists and am_exists and heur_exists:
+        time_ss = hist_data['time'].iloc[0]
+
+        ensemble_avg_intensity = (hist_data['intensity1arr'] * hist_data['freqintensity1'] * VF_1 + hist_data['intensity2arr'] * hist_data['freqintensity2'] * VF_2).sum()
+        ensemble_avg_temperature = (hist_data['temperature1arr'] * hist_data['freqtemperature1'] * VF_1 + hist_data['temperature2arr'] * hist_data['freqtemperature2'] * VF_2).sum()
+        ensemble_avg_opacity = (hist_data['opacity1arr'] * hist_data['freqopacity1'] * VF_1 + hist_data['opacity2arr'] * hist_data['freqopacity2'] * VF_2).sum()
 
         # Intensity Material 1 and 2
         plt.plot(hist_data['intensity1arr'][1:len(hist_data['intensity1arr'])-1], hist_data['freqintensity1'][1:len(hist_data['freqintensity1'])-1], color='b', label="Material 1")
         plt.plot(hist_data['intensity2arr'][1:len(hist_data['intensity2arr'])-1], hist_data['freqintensity2'][1:len(hist_data['freqintensity2'])-1], color='r', label="Material 2")
-        plt.axvline(x=21848239083.052482, color='k', label="Atomic Mix")
-        plt.axvline(x=2.115966666e10, color='c', label="Ensemble Average")
-        plt.axvline(x=20484661056.158676, color='g', label="Heuristic")
+        #plt.axvline(x=21848239083.052482, color='k', label="Atomic Mix")
+        plt.axvline(x=am_data.query(f"time == {time_ss}")['intensityarr'].iloc[0], color='k', label="Atomic Mix")
+        #plt.axvline(x=2.115966666e10, color='c', label="Ensemble Average")
+        plt.axvline(x=ensemble_avg_intensity, color='c', label="Ensemble Average")
+        #plt.axvline(x=20484661056.158676, color='g', label="Heuristic")
+        plt.axvline(x=heur_data.query(f"time == {time_ss}")['intensityarr'].iloc[0], color='g', label="Heuristic")
         plt.title(f"Intensity PDF - GPU Monte Carlo (Time = {time_ss:.4E} ct)")
         plt.xlabel("Intensity (erg/cm$^2$-s)")
         plt.ylabel("Probability Density")
@@ -228,9 +248,12 @@ def main():
         # Temperature Material 1 and 2
         plt.plot(hist_data['temperature1arr'][1:len(hist_data['temperature1arr'])-1], hist_data['freqtemperature1'][1:len(hist_data['freqtemperature1'])-1], color='b', label="Material 1")
         plt.plot(hist_data['temperature2arr'][1:len(hist_data['temperature2arr'])-1], hist_data['freqtemperature2'][1:len(hist_data['freqtemperature2'])-1], color='r', label="Material 2")
-        plt.axvline(x=0.2712211898921925, color='k', label="Atomic Mix")
-        plt.axvline(x=0.2906166666, color='c', label="Ensemble Average")
-        plt.axvline(x=0.31670525696951857, color='g', label="Heuristic")
+        #plt.axvline(x=0.2712211898921925, color='k', label="Atomic Mix")
+        plt.axvline(x=am_data.query(f"time == {time_ss}")['temperaturearr'].iloc[0], color='k', label="Atomic Mix")
+        #plt.axvline(x=0.2906166666, color='c', label="Ensemble Average")
+        plt.axvline(x=ensemble_avg_temperature, color='c', label="Ensemble Average")
+        #plt.axvline(x=0.31670525696951857, color='g', label="Heuristic")
+        plt.axvline(x=heur_data.query(f"time == {time_ss}")['temperaturearr'].iloc[0], color='k', label="Heuristic")
         plt.title(f"Temperature PDF - GPU Monte Carlo (Time = {time_ss:.4E} ct)")
         plt.xlabel("Temperature (eV)")
         plt.ylabel("Probability Density")
@@ -246,9 +269,12 @@ def main():
         # Opacity Material 1 and 2
         plt.plot(hist_data['opacity1arr'][1:len(hist_data['opacity1arr'])-1], hist_data['freqopacity1'][1:len(hist_data['freqopacity1'])-1], color='b', label="Material 1")
         plt.plot(hist_data['opacity2arr'][1:len(hist_data['opacity2arr'])-1], hist_data['freqopacity2'][1:len(hist_data['freqopacity2'])-1], color='r', label="Material 2")
-        plt.axvline(x=217.17419755097302, color='k', label="Atomic Mix")
-        plt.axvline(x=188.9405, color='c', label="Ensemble Average")
-        plt.axvline(x=181.94386078272075, color='g', label="Heuristic")
+        #plt.axvline(x=217.17419755097302, color='k', label="Atomic Mix")
+        plt.axvline(x=am_data.query(f"time == {time_ss}")['opacityarr'].iloc[0], color='k', label="Atomic Mix")
+        #plt.axvline(x=188.9405, color='c', label="Ensemble Average")
+        plt.axvline(x=ensemble_avg_opacity, color='c', label="Ensemble Average")
+        #plt.axvline(x=181.94386078272075, color='g', label="Heuristic")
+        plt.axvline(x=heur_data.query(f"time == {time_ss}")['intensityarr'].iloc[0], color='k', label="Heuristic")
         plt.title(f"Opacity PDF - GPU Monte Carlo (Time = {time_ss:.4E} ct)")
         plt.xlabel("Opacity (cm$^{-1}$)")
         plt.ylabel("Probability Density")

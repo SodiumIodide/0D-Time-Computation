@@ -60,9 +60,15 @@ function main()::Nothing
     println("Select data point to create histograms...")
     println("[1] Steady State -DEFAULT-")
     println("[2] Early Time-Step")
+    println("[3] Chosen Time-Step (Requires Entry)")
     local timestepselect::String = chomp(readline())
     if (occursin("2", timestepselect))
         chosenindex = hist_early_index
+        chosentime = old_data.time[chosenindex]
+    elseif (occursin("3", timestepselect))
+        println("Enter time index (integer value):")
+        # NOTE: Current PDFs at t-s 834
+        chosenindex = parse(Int64, readline())
         chosentime = old_data.time[chosenindex]
     else
         chosenindex = steady_state_index
@@ -128,7 +134,7 @@ function main()::Nothing
     local printlock::SpinLock = SpinLock()
 
     # Outer loop
-    @threads for i = 1:max_iterations_hist
+    Base.Threads.@threads for i = 1:max_iterations_hist
         local rand_num::Float64
 
         # First loop uses initial conditions
