@@ -230,7 +230,7 @@ def main():
         mc_nl_ub_temp_2 = nonlinear_mc['temperature2'] + mc_nl_std_temp_2
 
         # Intensity
-        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensityarr'], color='c', label="Exact")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['intensityarr'], color='c', label="Ensemble Average")
         #plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity1'], color='b', label="Material 1")
         #plt.plot(nonlinear_mc['time'], nonlinear_mc['intensity2'], color='r', label="Material 2")
         if PLOT_STD_DEV:
@@ -257,7 +257,7 @@ def main():
         # Temperature
         #plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature1'], color='b', label="Material 1")
         #plt.plot(nonlinear_mc['time'], nonlinear_mc['temperature2'], color='r', label="Material 2")
-        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperaturearr'], color='c', label="Exact")
+        plt.plot(nonlinear_mc['time'], nonlinear_mc['temperaturearr'], color='c', label="Ensemble Average")
         if PLOT_STD_DEV:
             plt.plot(nonlinear_mc['time'], mc_nl_lb_temp_1, color='b', linestyle=':', label=None)
             plt.plot(nonlinear_mc['time'], mc_nl_ub_temp_1, color='b', linestyle=':', label=None)

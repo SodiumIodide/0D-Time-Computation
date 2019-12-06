@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 
-include("GeometryGen.jl")
+include("GeometryGenThinning.jl")
 include("PhysicsFunctions.jl")
 include("MeshMap.jl")
 include("RunningStatistics.jl")
@@ -25,13 +25,16 @@ function main()::Nothing
     local stat_2_intensity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
     local stat_1_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
     local stat_2_temp::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_1_opacity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
+    local stat_2_opacity::Vector{RunningStatistics.RunningStat} = [RunningStatistics.RunningStat() for i in 1:num_t]
 
     # Outer loop
     @showprogress 1 for iteration_number = 1:max_iterations
-        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGen.get_geometry(chord_1, chord_2, t_max, num_divs, rng=generator)
+        local (t_delta::Vector{Float64}, t_arr::Vector{Float64}, materials::Vector{Int32}, num_cells::Int64) = GeometryGenThinning.get_geometry_thinning(t_max, num_divs, rng=generator)
 
         local intensity::Vector{Float64} = zeros(num_cells)
         local temp::Vector{Float64} = zeros(num_cells)
+        local opac::Vector{Float64} = zeros(num_cells)
 
         # First loop uses initial conditions
         local (intensity_value::Float64, temp_value::Float64) = (init_intensity, init_temp)
@@ -50,15 +53,15 @@ function main()::Nothing
 
             local error::Float64 = 1.0
 
+            local (opacity::Float64, spec_heat::Float64, dens::Float64) = (0.0, 0.0, 0.0)
+
             # Newtonian loop
             while @fastmath (error >= tolerance)
-                local opacity::Float64 = @inbounds PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
-                local spec_heat::Float64 = @inbounds PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
-                local dens::Float64 = @inbounds PhysicsFunctions.rho(dens_term, old_terms[2])
+                opacity = @inbounds PhysicsFunctions.sigma_a(opacity_term, old_terms[2])
+                spec_heat = @inbounds PhysicsFunctions.c_v(spec_heat_term, old_terms[2])
+                dens = @inbounds PhysicsFunctions.rho(dens_term, old_terms[2])
 
-                #local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.make_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens, spec_heat_term)
                 local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.complex_step_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens_term, spec_heat_term, intensity_value, temp_value)
-                #local jacobian::Array{Float64, 2} = @inbounds PhysicsFunctions.linear_jacobian(old_terms[1], old_terms[2], delta_t_unstruct, opacity_term, dens_term, spec_heat_term)
                 local func_vector::Vector{Float64} = [
                     @inbounds PhysicsFunctions.balance_a(old_terms[1], old_terms[2], delta_t_unstruct, opacity, intensity_value)
                     @inbounds PhysicsFunctions.balance_b(old_terms[1], old_terms[2], delta_t_unstruct, opacity, spec_heat, dens, temp_value)
@@ -75,19 +78,23 @@ function main()::Nothing
             temp_value = @inbounds new_terms[2]
             @inbounds intensity[index] = intensity_value  # erg/cm^2-s
             @inbounds temp[index] = temp_value  # eV
+            @inbounds opac[index] = opacity  # cm^-1
         end
 
         local material_intensity_array::Array{Float64, 2} = MeshMap.material_calc(intensity, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
         local material_temp_array::Array{Float64, 2} = MeshMap.material_calc(temp, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
+        local material_opac_array::Array{Float64, 2} = MeshMap.material_calc(opac, t_delta, num_cells, materials, delta_t, num_t, convert(Int32, 2))
 
         @simd for k in 1:num_t
             if @inbounds @fastmath (material_intensity_array[k, 1] != 0.0)
                 @inbounds RunningStatistics.push(stat_1_intensity[k], material_intensity_array[k, 1])  # erg/cm^2-s
                 @inbounds RunningStatistics.push(stat_1_temp[k], material_temp_array[k, 1])  # eV
+                @inbounds RunningStatistics.push(stat_1_opacity[k], material_opac_array[k, 1])  # cm^-1
             end
             if @inbounds @fastmath (material_intensity_array[k, 2] != 0.0)
                 @inbounds RunningStatistics.push(stat_2_intensity[k], material_intensity_array[k, 2])  # erg/cm^2-s
                 @inbounds RunningStatistics.push(stat_2_temp[k], material_temp_array[k, 2])  # eV
+                @inbounds RunningStatistics.push(stat_2_opacity[k], material_opac_array[k, 2])  # cm^-1
             end
         end
     end
@@ -97,12 +104,16 @@ function main()::Nothing
     local material_2_intensity::Vector{Float64} = RunningStatistics.mean.(stat_2_intensity)
     local material_1_temp::Vector{Float64} = RunningStatistics.mean.(stat_1_temp)
     local material_2_temp::Vector{Float64} = RunningStatistics.mean.(stat_2_temp)
+    local material_1_opacity::Vector{Float64} = RunningStatistics.mean.(stat_1_opacity)
+    local material_2_opacity::Vector{Float64} = RunningStatistics.mean.(stat_2_opacity)
 
     # Variance values
     local variance_1_intensity::Vector{Float64} = RunningStatistics.variance.(stat_1_intensity)
     local variance_2_intensity::Vector{Float64} = RunningStatistics.variance.(stat_2_intensity)
     local variance_1_temp::Vector{Float64} = RunningStatistics.variance.(stat_1_temp)
     local variance_2_temp::Vector{Float64} = RunningStatistics.variance.(stat_2_temp)
+    local variance_1_opacity::Vector{Float64} = RunningStatistics.variance.(stat_1_opacity)
+    local variance_2_opacity::Vector{Float64} = RunningStatistics.variance.(stat_2_opacity)
 
     # Maximum and minimum values
     local max_intensity_1::Vector{Float64} = RunningStatistics.greatest.(stat_1_intensity)
@@ -113,10 +124,18 @@ function main()::Nothing
     local min_temp_1::Vector{Float64} = RunningStatistics.least.(stat_1_temp)
     local max_temp_2::Vector{Float64} = RunningStatistics.greatest.(stat_2_temp)
     local min_temp_2::Vector{Float64} = RunningStatistics.least.(stat_2_temp)
+    local max_opacity_1::Vector{Float64} = RunningStatistics.greatest.(stat_1_opacity)
+    local min_opacity_1::Vector{Float64} = RunningStatistics.least.(stat_1_opacity)
+    local max_opacity_2::Vector{Float64} = RunningStatistics.greatest.(stat_2_opacity)
+    local min_opacity_2::Vector{Float64} = RunningStatistics.least.(stat_2_opacity)
 
-    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2)
+    local tabular::DataFrame = DataFrame(time=times, intensity1=material_1_intensity, varintensity1=variance_1_intensity, maxintensity1=max_intensity_1, minintensity1=min_intensity_1, temperature1=material_1_temp, vartemperature1=variance_1_temp, maxtemperature1=max_temp_1, mintemperature1=min_temp_1, opacity1=material_1_opacity, varopacity1=variance_1_opacity, maxopacity1=max_opacity_1, minopacity1=min_opacity_1, intensity2=material_2_intensity, varintensity2=variance_2_intensity, maxintensity2=max_intensity_2, minintensity2=min_intensity_2, temperature2=material_2_temp, vartemperature2=variance_2_temp, maxtemperature2=max_temp_2, mintemperature2=min_temp_2, opacity2=material_2_opacity, varopacity2=variance_2_opacity, maxopacity2=max_opacity_2, minopacity2=min_opacity_2)
 
-    CSV.write("out/nonlinear/data/nonlinear.csv", tabular)
+    if (quad)
+        CSV.write("out/nonlinear/data/nonlinear_nonhomog_quad.csv", tabular)
+    else
+        CSV.write("out/nonlinear/data/nonlinear_nonhomog_linear.csv", tabular)
+    end
 
     return nothing
 end

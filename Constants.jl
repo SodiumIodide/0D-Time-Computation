@@ -46,7 +46,13 @@ global const spec_heat_1 = 1e0  # erg/g-eV
 global const spec_heat_2 = 1e0  # erg/g-eV
 global const volfrac_1 = chord_1 / (chord_1 + chord_2)
 global const volfrac_2 = 1.0 - volfrac_1
-global const destruction_factor = 1.5
+global const destruction_factor = 1.0
+# Nonhomogeneous chord lengths
+global const start_chord_1 = 101.0 / 20.0 / sol * 1e-3  # s
+global const start_chord_2 = 101.0 / 20.0 / sol * 1e-3  # s
+global const end_chord_1 = 99.0 / 10.0 / sol * 1e-3  # s
+global const end_chord_2 = 11.0 / 10.0 / sol * 1e-3  # s
+global const quad = false  # quadratic or linear models for nonhomogeneous system
 
 # Linear factors
 global const factor_1 = 4.0 * arad / (dens_1 * spec_heat_1)  # eV^-3

@@ -57,7 +57,7 @@ module GeometryGen
                 push!(x_delta, @fastmath(time / convert(Float64, num_divs)))
                 push!(x_arr, @fastmath(cons_time - time + (time / convert(Float64, num_divs) * convert(Float64, i))))
                 push!(materials, material_num)
-                num_cells += @fastmath 1
+                @fastmath num_cells += 1
             end
 
             # Update material number
